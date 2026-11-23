@@ -1,0 +1,55 @@
+
+import { describe, expect, it } from "vitest";
+
+import { hasOrganizationPermission } from "./organization-permissions";
+
+describe("Organization permissions", () => {
+  it("allows OWNER to delete an organization", () => {
+    expect(
+      hasOrganizationPermission("OWNER", "DELETE_ORGANIZATION"),
+    ).toBe(true);
+  });
+
+  it("prevents ADMIN from deleting an organization", () => {
+    expect(
+      hasOrganizationPermission("ADMIN", "DELETE_ORGANIZATION"),
+    ).toBe(false);
+  });
+
+  it("prevents MEMBER from managing members", () => {
+    expect(
+      hasOrganizationPermission("MEMBER", "MANAGE_MEMBERS"),
+    ).toBe(false);
+  });
+
+  it("allows all roles to view an organization", () => {
+    const roles = ["OWNER", "ADMIN", "MEMBER"] as const;
+
+    roles.forEach((role) => {
+      expect(
+        hasOrganizationPermission(role, "VIEW_ORGANIZATION"),
+      ).toBe(true);
+    });
+  });
+
+  it("prevents ADMIN from transferring ownership", () => {
+    expect(
+      hasOrganizationPermission("ADMIN", "TRANSFER_OWNERSHIP"),
+    ).toBe(false);
+  });
+
+it("denies all permissions to unknown roles", () => {
+  expect(
+    hasOrganizationPermission("COORDINATOR", "VIEW_ORGANIZATION"),
+  ).toBe(false);
+
+  expect(
+    hasOrganizationPermission("SUPER_ADMIN", "DELETE_ORGANIZATION"),
+  ).toBe(false);
+
+  expect(
+    hasOrganizationPermission("", "MANAGE_MEMBERS"),
+  ).toBe(false);
+});
+
+});
