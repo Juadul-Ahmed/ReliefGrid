@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import AdminShell from "@/components/admin/AdminShell";
 import { auth } from "@/lib/auth";
 
 interface AdminLayoutProps {
@@ -26,5 +27,5 @@ export default async function AdminLayout({
     redirect("/onboarding");
   }
 
-  return <>{children}</>;
+  return <AdminShell>{children}</AdminShell>;
 }

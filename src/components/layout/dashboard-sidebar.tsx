@@ -2,8 +2,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import type { IconType } from "react-icons";
+import { toast } from "react-toastify";
+
+import { signOut } from "@/lib/auth-client";
+
 import {
   HiOutlineShieldCheck,
   HiOutlineSquares2X2,
@@ -16,6 +21,7 @@ import {
   HiOutlineMap,
   HiOutlineChartBar,
   HiOutlineCog6Tooth,
+  HiOutlineArrowRightOnRectangle,
 } from "react-icons/hi2";
 
 interface DashboardSidebarProps {
@@ -120,14 +126,38 @@ export function DashboardSidebar({
   onClose,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+
+    try {
+      const result = await signOut();
+
+      if (result.error) {
+        toast.error("Unable to sign out. Please try again.");
+        setIsSigningOut(false);
+        return;
+      }
+
+      toast.success("Signed out successfully.");
+      router.replace("/login");
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong while signing out.");
+      setIsSigningOut(false);
+    }
+  }
 
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-40 flex w-64 flex-col
+        fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col
         border-r border-border bg-surface
         transition-transform duration-300
-        lg:static lg:translate-x-0
+        lg:sticky lg:top-0 lg:translate-x-0
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
@@ -148,7 +178,7 @@ export function DashboardSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+      <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-6">
         {navigationGroups.map((group, index) => (
           <div key={group.label ?? `group-${index}`}>
             {group.label && (
@@ -192,13 +222,25 @@ export function DashboardSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border p-4">
-        <p className="text-xs text-muted">
-          Emergency Response Platform
-        </p>
-        <p className="mt-1 text-[10px] text-muted">
-          ReliefGrid v0.1.0
-        </p>
+      <div className="shrink-0 border-t border-border p-4">
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="mb-4 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <HiOutlineArrowRightOnRectangle className="size-5" />
+          {isSigningOut ? "Signing out..." : "Sign Out"}
+        </button>
+
+        <div className="border-t border-border pt-3">
+          <p className="text-xs text-muted">
+            Emergency Response Platform
+          </p>
+          <p className="mt-1 text-[10px] text-muted">
+            ReliefGrid v0.1.0
+          </p>
+        </div>
       </div>
     </aside>
   );
