@@ -42,6 +42,12 @@ export const auth = betterAuth({
     organization({
       allowUserToCreateOrganization: false,
 
+      // Email verification is not required for invitations.
+      requireEmailVerificationOnInvitation: false,
+
+      // Invitations expire after 7 days.
+      invitationExpiresIn: 60 * 60 * 24 * 7,
+
       organization: {
         additionalFields: {
           status: {

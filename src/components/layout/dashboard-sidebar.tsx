@@ -117,6 +117,11 @@ const navigationGroups: NavigationGroup[] = [
         href: "/settings",
         icon: HiOutlineCog6Tooth,
       },
+       {
+      label: "Members",
+      href: "/settings/members",
+      icon: HiOutlineUsers,
+    },
     ],
   },
 ];
