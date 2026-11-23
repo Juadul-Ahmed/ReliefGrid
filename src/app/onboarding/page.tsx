@@ -7,6 +7,7 @@ import AccountInformation from "@/components/onboarding/AccountInformation";
 import ApplicationStatusCard from "@/components/onboarding/ApplicationStatusCard";
 import OnboardingHeader from "@/components/onboarding/OnboardingHeader";
 import OnboardingOptions from "@/components/onboarding/OnboardingOptions";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
@@ -92,16 +93,22 @@ export default async function OnboardingPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#F4F7FB]">
+      <LandingNavbar
+        isAuthenticated={true}
+        hasOrganization={false}
+        isSystemAdmin={false}
+      />
+
       {/* Background decoration */}
       <div className="pointer-events-none absolute -left-40 -top-40 size-[500px] rounded-full bg-emerald-200/20 blur-3xl" />
 
       <div className="pointer-events-none absolute -right-40 top-40 size-[500px] rounded-full bg-blue-200/20 blur-3xl" />
 
       {/* Top accent */}
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#101D35] via-emerald-500 to-[#101D35]" />
+      <div className="absolute inset-x-0 top-16 h-1 bg-gradient-to-r from-[#101D35] via-emerald-500 to-[#101D35]" />
 
       <div className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12 lg:px-10">
-        <OnboardingHeader userName={session.user.name} />
+        {/* <OnboardingHeader userName={session.user.name} /> */}
 
         <div className="mx-auto max-w-5xl">
           <AccountInformation email={session.user.email} />

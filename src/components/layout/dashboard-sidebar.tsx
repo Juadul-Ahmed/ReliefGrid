@@ -22,6 +22,7 @@ import {
   HiOutlineChartBar,
   HiOutlineCog6Tooth,
   HiOutlineArrowRightOnRectangle,
+  HiHome,
 } from "react-icons/hi2";
 
 interface DashboardSidebarProps {
@@ -47,6 +48,11 @@ const navigationGroups: NavigationGroup[] = [
         label: "Dashboard",
         href: "/dashboard",
         icon: HiOutlineSquares2X2,
+      },
+      {
+        label: "Home",
+        href: "/",
+        icon: HiHome,
       },
     ],
   },
