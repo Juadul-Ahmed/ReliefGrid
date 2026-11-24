@@ -19,6 +19,17 @@ type InviteIncidentParticipantResult =
       expiresAt: string;
     };
 
+type RespondToIncidentInvitationResult =
+  | {
+      success: false;
+      message: string;
+    }
+  | {
+      success: true;
+      message: string;
+      participantId: string;
+    };
+
 const INVITATION_VALIDITY_DAYS = 7;
 
 export async function inviteIncidentParticipant(
@@ -351,4 +362,265 @@ export async function inviteIncidentParticipant(
         "Something went wrong while inviting the organization. Please try again.",
     };
   }
+}
+
+// ============================================================
+// INCOMING INCIDENT INVITATIONS
+// ============================================================
+
+async function respondToIncidentInvitation(
+  participantId: unknown,
+  decision: "ACCEPT" | "REJECT",
+): Promise<RespondToIncidentInvitationResult> {
+  // Only organization OWNER/ADMIN can respond to invitations.
+  const context = await requireOrganizationPermission(
+    "RESPOND_TO_INCIDENT_INVITATIONS",
+  );
+
+  // Validate the participant ID.
+  if (
+    typeof participantId !== "string" ||
+    participantId.trim().length === 0
+  ) {
+    return {
+      success: false,
+      message: "Invalid invitation.",
+    };
+  }
+
+  const normalizedParticipantId = participantId.trim();
+
+  try {
+    const now = new Date();
+
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // 1. Find a pending invitation belonging to the active organization.
+        const participant = await tx.incidentParticipant.findFirst({
+          where: {
+            id: normalizedParticipantId,
+            organizationId: context.organizationId,
+            status: "INVITED",
+          },
+          select: {
+            id: true,
+            expiresAt: true,
+            incident: {
+              select: {
+                id: true,
+                incidentNumber: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+        if (!participant) {
+          return {
+            outcome: "NOT_FOUND" as const,
+          };
+        }
+
+        // 2. Check expiration before accepting or rejecting.
+        if (participant.expiresAt && participant.expiresAt <= now) {
+          const expired = await tx.incidentParticipant.updateMany({
+            where: {
+              id: participant.id,
+              organizationId: context.organizationId,
+              status: "INVITED",
+              expiresAt: {
+                lte: now,
+              },
+            },
+            data: {
+              status: "EXPIRED",
+            },
+          });
+
+          if (expired.count !== 1) {
+            return {
+              outcome: "CONFLICT" as const,
+            };
+          }
+
+          // Record expiration in the audit log.
+          await tx.auditLog.create({
+            data: {
+              actorUserId: context.session.user.id,
+              actorType: "USER",
+              actorNameSnapshot: context.session.user.name,
+              organizationId: context.organizationId,
+              action: "INCIDENT_PARTICIPANT_INVITATION_EXPIRED",
+              entityType: "IncidentParticipant",
+              entityId: participant.id,
+              before: {
+                status: "INVITED",
+              },
+              after: {
+                status: "EXPIRED",
+              },
+              metadata: {
+                incidentId: participant.incident.id,
+                incidentNumber: participant.incident.incidentNumber,
+                incidentTitle: participant.incident.title,
+              },
+            },
+          });
+
+          return {
+            outcome: "EXPIRED" as const,
+          };
+        }
+
+        // 3. Determine the new participation status.
+        const nextStatus =
+          decision === "ACCEPT" ? "ACTIVE" : "REJECTED";
+
+        // 4. Update only if the invitation is still pending and valid.
+        // This prevents duplicate responses and stale submissions.
+        const updated = await tx.incidentParticipant.updateMany({
+          where: {
+            id: participant.id,
+            organizationId: context.organizationId,
+            status: "INVITED",
+            OR: [
+              {
+                expiresAt: null,
+              },
+              {
+                expiresAt: {
+                  gt: now,
+                },
+              },
+            ],
+          },
+          data: {
+            status: nextStatus,
+            respondedById: context.session.user.id,
+            respondedAt: now,
+            joinedAt: decision === "ACCEPT" ? now : null,
+          },
+        });
+
+        if (updated.count !== 1) {
+          return {
+            outcome: "CONFLICT" as const,
+          };
+        }
+
+        // 5. Record acceptance or rejection in the audit log.
+        await tx.auditLog.create({
+          data: {
+            actorUserId: context.session.user.id,
+            actorType: "USER",
+            actorNameSnapshot: context.session.user.name,
+            organizationId: context.organizationId,
+            action:
+              decision === "ACCEPT"
+                ? "INCIDENT_PARTICIPANT_INVITATION_ACCEPTED"
+                : "INCIDENT_PARTICIPANT_INVITATION_REJECTED",
+            entityType: "IncidentParticipant",
+            entityId: participant.id,
+            before: {
+              status: "INVITED",
+            },
+            after: {
+              status: nextStatus,
+              respondedAt: now.toISOString(),
+            },
+            metadata: {
+              incidentId: participant.incident.id,
+              incidentNumber: participant.incident.incidentNumber,
+              incidentTitle: participant.incident.title,
+            },
+          },
+        });
+
+        return {
+          outcome:
+            decision === "ACCEPT"
+              ? ("ACCEPTED" as const)
+              : ("REJECTED" as const),
+          incidentId: participant.incident.id,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    // 6. Handle possible transaction outcomes.
+    if (result.outcome === "NOT_FOUND") {
+      return {
+        success: false,
+        message: "Invitation not found or no longer available.",
+      };
+    }
+
+    if (result.outcome === "EXPIRED") {
+      revalidatePath("/incident-invitations");
+      revalidatePath("/incidents");
+
+      return {
+        success: false,
+        message: "This invitation has expired.",
+      };
+    }
+
+    if (result.outcome === "CONFLICT") {
+      return {
+        success: false,
+        message:
+          "This invitation has already been processed. Please refresh.",
+      };
+    }
+
+    // 7. Refresh the relevant pages after a successful response.
+    revalidatePath("/incident-invitations");
+    revalidatePath("/incidents");
+    revalidatePath(`/incidents/${result.incidentId}`);
+
+    return {
+      success: true,
+      message:
+        decision === "ACCEPT"
+          ? "Incident invitation accepted successfully."
+          : "Incident invitation rejected successfully.",
+      participantId: normalizedParticipantId,
+    };
+  } catch (error) {
+    // Handle concurrent transaction conflicts.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    ) {
+      return {
+        success: false,
+        message:
+          "The invitation changed during processing. Please refresh and try again.",
+      };
+    }
+
+    console.error("Respond to incident invitation error:", error);
+
+    return {
+      success: false,
+      message:
+        "Something went wrong while processing the invitation.",
+    };
+  }
+}
+
+// Accept an incoming incident invitation.
+export async function acceptIncidentInvitation(
+  participantId: unknown,
+): Promise<RespondToIncidentInvitationResult> {
+  return respondToIncidentInvitation(participantId, "ACCEPT");
+}
+
+// Reject an incoming incident invitation.
+export async function rejectIncidentInvitation(
+  participantId: unknown,
+): Promise<RespondToIncidentInvitationResult> {
+  return respondToIncidentInvitation(participantId, "REJECT");
 }

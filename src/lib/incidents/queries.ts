@@ -305,3 +305,68 @@ export async function getIncidentParticipants(
 
   return incident?.participants ?? null;
 }
+
+/**
+ * Returns pending incident invitations addressed to an organization.
+ *
+ * Only invitations belonging to the supplied organization are returned.
+ */
+export async function getIncomingIncidentInvitations(
+  organizationId: string,
+) {
+  const now = new Date();
+
+  return prisma.incidentParticipant.findMany({
+    where: {
+      organizationId,
+      status: "INVITED",
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: now } },
+      ],
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+      createdAt: true,
+
+      incident: {
+        select: {
+          id: true,
+          incidentNumber: true,
+          title: true,
+          description: true,
+          category: true,
+          severity: true,
+          status: true,
+          locationName: true,
+          occurredAt: true,
+
+          leadOrganization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+
+      roles: {
+        select: {
+          role: true,
+        },
+      },
+
+      invitedBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}

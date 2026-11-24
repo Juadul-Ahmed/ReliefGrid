@@ -72,6 +72,11 @@ const navigationGroups: NavigationGroup[] = [
         icon: HiOutlineExclamationTriangle,
       },
       {
+        label: "Incident Invitations",
+        href: "/incident-invitations",
+        icon: HiOutlineClipboardDocumentList,
+      },
+      {
         label: "Emergency Requests",
         href: "/requests",
         icon: HiOutlineClipboardDocumentList,
