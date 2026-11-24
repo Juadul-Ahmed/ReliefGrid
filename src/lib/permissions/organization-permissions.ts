@@ -6,7 +6,8 @@ export type OrganizationPermission =
   | "MANAGE_MEMBERS"
   | "UPDATE_SETTINGS"
   | "DELETE_ORGANIZATION"
-  | "TRANSFER_OWNERSHIP";
+  | "TRANSFER_OWNERSHIP"
+  | "CREATE_INCIDENT";
 
 const validOrganizationRoles: OrganizationRole[] = [
   "OWNER",
@@ -24,15 +25,20 @@ const organizationPermissions: Record<
     "UPDATE_SETTINGS",
     "DELETE_ORGANIZATION",
     "TRANSFER_OWNERSHIP",
+    "CREATE_INCIDENT",
   ],
 
   ADMIN: [
     "VIEW_ORGANIZATION",
     "MANAGE_MEMBERS",
     "UPDATE_SETTINGS",
+    "CREATE_INCIDENT",
   ],
 
-  MEMBER: ["VIEW_ORGANIZATION"],
+  MEMBER: [
+    "VIEW_ORGANIZATION",
+    "CREATE_INCIDENT",
+  ],
 };
 
 export function hasOrganizationPermission(
