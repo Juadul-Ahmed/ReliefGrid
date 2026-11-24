@@ -38,18 +38,51 @@ describe("Organization permissions", () => {
     ).toBe(false);
   });
 
-it("denies all permissions to unknown roles", () => {
-  expect(
-    hasOrganizationPermission("COORDINATOR", "VIEW_ORGANIZATION"),
-  ).toBe(false);
+  it("denies all permissions to unknown roles", () => {
+    expect(
+      hasOrganizationPermission("COORDINATOR", "VIEW_ORGANIZATION"),
+    ).toBe(false);
 
-  expect(
-    hasOrganizationPermission("SUPER_ADMIN", "DELETE_ORGANIZATION"),
-  ).toBe(false);
+    expect(
+      hasOrganizationPermission("SUPER_ADMIN", "DELETE_ORGANIZATION"),
+    ).toBe(false);
 
-  expect(
-    hasOrganizationPermission("", "MANAGE_MEMBERS"),
-  ).toBe(false);
-});
+    expect(
+      hasOrganizationPermission("", "MANAGE_MEMBERS"),
+    ).toBe(false);
+  });
 
+  it("allows OWNER to manage incident participants", () => {
+    expect(
+      hasOrganizationPermission("OWNER", "MANAGE_INCIDENT_PARTICIPANTS"),
+    ).toBe(true);
+  });
+
+  it("allows ADMIN to manage incident participants", () => {
+    expect(
+      hasOrganizationPermission("ADMIN", "MANAGE_INCIDENT_PARTICIPANTS"),
+    ).toBe(true);
+  });
+
+  it("prevents MEMBER from managing incident participants", () => {
+    expect(
+      hasOrganizationPermission("MEMBER", "MANAGE_INCIDENT_PARTICIPANTS"),
+    ).toBe(false);
+  });
+
+  it("allows OWNER and ADMIN to respond to incident invitations", () => {
+    expect(
+      hasOrganizationPermission("OWNER", "RESPOND_TO_INCIDENT_INVITATIONS"),
+    ).toBe(true);
+
+    expect(
+      hasOrganizationPermission("ADMIN", "RESPOND_TO_INCIDENT_INVITATIONS"),
+    ).toBe(true);
+  });
+
+  it("prevents MEMBER from responding to incident invitations", () => {
+    expect(
+      hasOrganizationPermission("MEMBER", "RESPOND_TO_INCIDENT_INVITATIONS"),
+    ).toBe(false);
+  });
 });

@@ -7,13 +7,19 @@ import {
 } from "react-icons/hi2";
 
 import { requireOrganization } from "@/lib/permissions/organization";
-import { getIncidentById } from "@/lib/incidents/queries";
+import {
+  getIncidentById,
+  getIncidentParticipants,
+  getAvailableParticipantOrganizations,
+} from "@/lib/incidents/queries";
 import { prisma } from "@/lib/db/prisma";
 import { hasOrganizationPermission } from "@/lib/permissions/organization-permissions";
 
 import { IncidentSeverityBadge } from "@/components/incidents/IncidentSeverityBadge";
 import { IncidentStatusBadge } from "@/components/incidents/IncidentStatusBadge";
 import { IncidentCoordinatorManager } from "@/components/incidents/IncidentCoordinatorManager";
+import { IncidentStatusSeverityManager } from "@/components/incidents/IncidentStatusSeverityManager";
+import { IncidentParticipantManager } from "@/components/incidents/IncidentParticipantManager";
 
 interface IncidentDetailsPageProps {
   params: Promise<{
@@ -66,35 +72,75 @@ export default async function IncidentDetailsPage({
   const isLeadOrganization =
     incident.leadOrganizationId === organizationId;
 
+  const currentRole = membership.role.toUpperCase();
+
   // Only lead organization OWNER and ADMIN can manage coordinators.
   const canManageCoordinator =
     isLeadOrganization &&
     hasOrganizationPermission(
-      membership.role.toUpperCase(),
+      currentRole,
       "ASSIGN_INCIDENT_COORDINATOR",
     );
 
-  // Fetch active members only for authorized managers.
-  const members = canManageCoordinator
-    ? await prisma.member.findMany({
-        where: {
-          organizationId: incident.leadOrganizationId,
-          status: "ACTIVE",
-        },
-        select: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+  // Only lead organization OWNER and ADMIN can update status and severity.
+  const canManageIncidentUpdates =
+    isLeadOrganization &&
+    hasOrganizationPermission(
+      currentRole,
+      "UPDATE_INCIDENT_STATUS",
+    ) &&
+    hasOrganizationPermission(
+      currentRole,
+      "UPDATE_INCIDENT_SEVERITY",
+    );
+
+  // Only lead organization OWNER and ADMIN can manage participants.
+  const canManageParticipants =
+    isLeadOrganization &&
+    hasOrganizationPermission(
+      currentRole,
+      "MANAGE_INCIDENT_PARTICIPANTS",
+    );
+
+  // Fetch coordinator members, participants, and invitation options.
+  // Invitation options are fetched only for authorized managers.
+  const [
+    members,
+    participants,
+    availableOrganizations,
+  ] = await Promise.all([
+    canManageCoordinator
+      ? prisma.member.findMany({
+          where: {
+            organizationId: incident.leadOrganizationId,
+            status: "ACTIVE",
+          },
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      })
-    : [];
+          orderBy: {
+            createdAt: "asc",
+          },
+        })
+      : Promise.resolve([]),
+
+    getIncidentParticipants(
+      incident.id,
+      incident.leadOrganizationId,
+    ),
+
+    canManageParticipants
+      ? getAvailableParticipantOrganizations(
+          incident.leadOrganizationId,
+        )
+      : Promise.resolve([]),
+  ]);
 
   const coordinatorMembers = members.map((member) => ({
     id: member.user.id,
@@ -224,6 +270,24 @@ export default async function IncidentDetailsPage({
           members={coordinatorMembers}
         />
       )}
+
+      {/* Incident Status & Severity Management */}
+      {canManageIncidentUpdates && (
+        <IncidentStatusSeverityManager
+          key={`${incident.status}-${incident.severity}`}
+          incidentId={incident.id}
+          currentStatus={incident.status}
+          currentSeverity={incident.severity}
+        />
+      )}
+
+      {/* Incident Participants */}
+      <IncidentParticipantManager
+        incidentId={incident.id}
+        participants={participants ?? []}
+        availableOrganizations={availableOrganizations}
+        canManage={canManageParticipants}
+      />
 
       {/* Location */}
       <section className="rounded-xl border border-border bg-surface p-5">

@@ -64,6 +64,7 @@ export function buildIncidentFilters(
     });
   }
 
+  // Filter by incident status.
   if (
     filters.status &&
     INCIDENT_STATUSES.includes(
@@ -75,17 +76,7 @@ export function buildIncidentFilters(
     });
   }
 
-  if (
-    filters.severity &&
-    INCIDENT_SEVERITIES.includes(
-      filters.severity as (typeof INCIDENT_SEVERITIES)[number],
-    )
-  ) {
-    conditions.push({
-      status: filters.status as (typeof INCIDENT_STATUSES)[number],
-    });
-  }
-
+  // Filter by incident severity.
   if (
     filters.severity &&
     INCIDENT_SEVERITIES.includes(
@@ -225,4 +216,92 @@ export async function getIncidentById(
       },
     },
   });
+}
+
+/**
+ * Returns active organizations that can be invited to participate
+ * in an incident.
+ *
+ * The lead organization is excluded.
+ */
+export async function getAvailableParticipantOrganizations(
+  leadOrganizationId: string,
+) {
+  return prisma.organization.findMany({
+    where: {
+      status: "ACTIVE",
+      id: {
+        not: leadOrganizationId,
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+}
+
+/**
+ * Returns participant organizations for an incident.
+ *
+ * The incident must belong to the supplied lead organization.
+ */
+export async function getIncidentParticipants(
+  incidentId: string,
+  leadOrganizationId: string,
+) {
+  const incident = await prisma.incident.findFirst({
+    where: {
+      id: incidentId,
+      leadOrganizationId,
+    },
+    select: {
+      participants: {
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          status: true,
+          expiresAt: true,
+          joinedAt: true,
+          withdrawnAt: true,
+          createdAt: true,
+          updatedAt: true,
+
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+
+          roles: {
+            select: {
+              role: true,
+            },
+          },
+
+          invitedBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+
+          respondedBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return incident?.participants ?? null;
 }
