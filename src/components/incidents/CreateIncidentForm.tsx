@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { toast } from "react-toastify";
 import {
   useForm,
   type FieldPath,
@@ -43,9 +43,6 @@ const labelClass = "mb-1.5 block text-sm font-medium";
 const errorClass = "mt-1 text-xs text-red-500";
 
 export function CreateIncidentForm() {
-  const [serverMessage, setServerMessage] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -72,60 +69,51 @@ export function CreateIncidentForm() {
   });
 
   const onSubmit: SubmitHandler<CreateIncidentFormValues> = async (data) => {
-    setServerMessage("");
-    setIsSuccess(false);
-
     try {
       const result = await createIncident(data);
 
-      if (!result.success) {
-        setServerMessage(result.message);
-
+      if (result.success === false) {
         if (result.errors) {
+          let hasFieldErrors = false;
+
           Object.entries(result.errors).forEach(([field, messages]) => {
             const message = messages?.[0];
 
             if (message) {
+              hasFieldErrors = true;
+
               setError(field as FieldPath<CreateIncidentFormValues>, {
                 type: "server",
                 message,
               });
             }
           });
+
+          if (hasFieldErrors) {
+            toast.error("Please check the incident information.");
+          } else {
+            toast.error(result.message);
+          }
+        } else {
+          toast.error(result.message);
         }
 
         return;
       }
 
-      setIsSuccess(true);
-      setServerMessage(
+      toast.success(
         `${result.message} Incident number: ${result.incident.incidentNumber}`,
       );
 
       reset();
-    } catch {
-      setServerMessage(
-        "Something went wrong. Please try again.",
-      );
+    } catch (error) {
+      console.error("Incident form submission failed:", error);
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Server Response */}
-      {serverMessage && (
-        <div
-          role={isSuccess ? "status" : "alert"}
-          className={`rounded-lg border p-3 text-sm ${
-            isSuccess
-              ? "border-green-500/30 bg-green-500/10 text-green-600"
-              : "border-red-500/30 bg-red-500/10 text-red-500"
-          }`}
-        >
-          {serverMessage}
-        </div>
-      )}
-
       {/* Incident Information */}
       <section className="space-y-4 rounded-xl border border-border bg-surface p-5">
         <div>

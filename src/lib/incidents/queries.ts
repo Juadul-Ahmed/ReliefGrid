@@ -159,3 +159,45 @@ export async function getIncidentStats(organizationId: string) {
     resolved,
   };
 }
+
+
+export async function getIncidentById(
+  incidentId: string,
+  organizationId: string,
+) {
+  return prisma.incident.findFirst({
+    where: {
+      AND: [
+        { id: incidentId },
+        getOrganizationIncidentScope(organizationId),
+      ],
+    },
+    select: {
+      id: true,
+      incidentNumber: true,
+      title: true,
+      description: true,
+      category: true,
+      severity: true,
+      status: true,
+
+      locationName: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+
+      occurredAt: true,
+      createdAt: true,
+      updatedAt: true,
+
+      verifiedAt: true,
+
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}
