@@ -204,8 +204,9 @@ model User {
   submittedIncidentReports IncidentReport[] @relation("IncidentReportSubmitter")
   verifiedIncidentReports  IncidentReport[] @relation("IncidentReportVerifier")
 
-  createdIncidents  Incident[] @relation("IncidentCreator")
-  verifiedIncidents Incident[] @relation("IncidentVerifier")
+  createdIncidents     Incident[] @relation("IncidentCreator")
+  verifiedIncidents    Incident[] @relation("IncidentVerifier")
+  coordinatedIncidents Incident[] @relation("IncidentCoordinator")
 
   grantedIncidentPermissions IncidentParticipantPermission[] @relation("PermissionGrantedBy")
 
@@ -586,6 +587,9 @@ model Incident {
   createdById String?
   createdBy   User?   @relation("IncidentCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
+  coordinatorId String?
+  coordinator   User?   @relation("IncidentCoordinator", fields: [coordinatorId], references: [id], onDelete: SetNull)
+
   verifiedById String?
   verifiedBy   User?   @relation("IncidentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
 
@@ -606,6 +610,7 @@ model Incident {
   @@index([category])
   @@index([leadOrganizationId, status])
   @@index([createdById])
+  @@index([coordinatorId])
   @@index([verifiedById])
   @@index([occurredAt])
   @@map("incident")

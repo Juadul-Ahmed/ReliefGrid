@@ -1,3 +1,4 @@
+
 import { prisma } from "@/lib/db/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -67,6 +68,17 @@ export function buildIncidentFilters(
     filters.status &&
     INCIDENT_STATUSES.includes(
       filters.status as (typeof INCIDENT_STATUSES)[number],
+    )
+  ) {
+    conditions.push({
+      status: filters.status as (typeof INCIDENT_STATUSES)[number],
+    });
+  }
+
+  if (
+    filters.severity &&
+    INCIDENT_SEVERITIES.includes(
+      filters.severity as (typeof INCIDENT_SEVERITIES)[number],
     )
   ) {
     conditions.push({
@@ -160,7 +172,6 @@ export async function getIncidentStats(organizationId: string) {
   };
 }
 
-
 export async function getIncidentById(
   incidentId: string,
   organizationId: string,
@@ -181,17 +192,31 @@ export async function getIncidentById(
       severity: true,
       status: true,
 
+      // Lead organization
+      leadOrganizationId: true,
+
+      // Assigned coordinator
+      coordinator: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+
+      // Location
       locationName: true,
       address: true,
       latitude: true,
       longitude: true,
 
+      // Dates
       occurredAt: true,
       createdAt: true,
       updatedAt: true,
-
       verifiedAt: true,
 
+      // Creator
       createdBy: {
         select: {
           id: true,

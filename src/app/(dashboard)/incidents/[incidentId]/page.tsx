@@ -3,15 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   HiOutlineArrowLeft,
-  HiOutlineCalendar,
   HiOutlineMapPin,
-  HiOutlineUser,
 } from "react-icons/hi2";
 
 import { requireOrganization } from "@/lib/permissions/organization";
 import { getIncidentById } from "@/lib/incidents/queries";
+import { prisma } from "@/lib/db/prisma";
+import { hasOrganizationPermission } from "@/lib/permissions/organization-permissions";
+
 import { IncidentSeverityBadge } from "@/components/incidents/IncidentSeverityBadge";
 import { IncidentStatusBadge } from "@/components/incidents/IncidentStatusBadge";
+import { IncidentCoordinatorManager } from "@/components/incidents/IncidentCoordinatorManager";
 
 interface IncidentDetailsPageProps {
   params: Promise<{
@@ -47,7 +49,9 @@ export default async function IncidentDetailsPage({
   params,
 }: IncidentDetailsPageProps) {
   const { incidentId } = await params;
-  const { organizationId } = await requireOrganization();
+
+  const { organizationId, membership } =
+    await requireOrganization();
 
   const incident = await getIncidentById(
     incidentId,
@@ -57,6 +61,46 @@ export default async function IncidentDetailsPage({
   if (!incident) {
     notFound();
   }
+
+  // Check whether the current organization owns this incident.
+  const isLeadOrganization =
+    incident.leadOrganizationId === organizationId;
+
+  // Only lead organization OWNER and ADMIN can manage coordinators.
+  const canManageCoordinator =
+    isLeadOrganization &&
+    hasOrganizationPermission(
+      membership.role.toUpperCase(),
+      "ASSIGN_INCIDENT_COORDINATOR",
+    );
+
+  // Fetch active members only for authorized managers.
+  const members = canManageCoordinator
+    ? await prisma.member.findMany({
+        where: {
+          organizationId: incident.leadOrganizationId,
+          status: "ACTIVE",
+        },
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      })
+    : [];
+
+  const coordinatorMembers = members.map((member) => ({
+    id: member.user.id,
+    name: member.user.name,
+    email: member.user.email,
+  }));
 
   return (
     <div className="space-y-6">
@@ -147,10 +191,45 @@ export default async function IncidentDetailsPage({
         </div>
       </section>
 
+      {/* Incident Coordinator */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">
+          Incident Coordinator
+        </h2>
+
+        {incident.coordinator ? (
+          <div className="mt-4">
+            <p className="text-sm font-medium">
+              {incident.coordinator.name}
+            </p>
+
+            <p className="mt-1 text-sm text-muted">
+              {incident.coordinator.email}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted">
+            No coordinator assigned yet.
+          </p>
+        )}
+      </section>
+
+      {/* Coordinator Management */}
+      {canManageCoordinator && (
+        <IncidentCoordinatorManager
+          incidentId={incident.id}
+          currentCoordinatorId={
+            incident.coordinator?.id ?? null
+          }
+          members={coordinatorMembers}
+        />
+      )}
+
       {/* Location */}
       <section className="rounded-xl border border-border bg-surface p-5">
         <div className="flex items-center gap-2">
           <HiOutlineMapPin className="size-5 text-muted" />
+
           <h2 className="text-lg font-semibold">
             Location Details
           </h2>

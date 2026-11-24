@@ -7,7 +7,8 @@ export type OrganizationPermission =
   | "UPDATE_SETTINGS"
   | "DELETE_ORGANIZATION"
   | "TRANSFER_OWNERSHIP"
-  | "CREATE_INCIDENT";
+  | "CREATE_INCIDENT"
+  | "ASSIGN_INCIDENT_COORDINATOR";
 
 const validOrganizationRoles: OrganizationRole[] = [
   "OWNER",
@@ -26,6 +27,7 @@ const organizationPermissions: Record<
     "DELETE_ORGANIZATION",
     "TRANSFER_OWNERSHIP",
     "CREATE_INCIDENT",
+    "ASSIGN_INCIDENT_COORDINATOR",
   ],
 
   ADMIN: [
@@ -33,6 +35,7 @@ const organizationPermissions: Record<
     "MANAGE_MEMBERS",
     "UPDATE_SETTINGS",
     "CREATE_INCIDENT",
+    "ASSIGN_INCIDENT_COORDINATOR",
   ],
 
   MEMBER: [
@@ -45,7 +48,6 @@ export function hasOrganizationPermission(
   role: string,
   permission: OrganizationPermission,
 ): boolean {
-  // Reject unknown roles before accessing the permissions map.
   if (!validOrganizationRoles.includes(role as OrganizationRole)) {
     return false;
   }
