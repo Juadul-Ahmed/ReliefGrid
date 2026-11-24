@@ -17,6 +17,7 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineCog6Tooth,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineExclamationTriangle,
 } from "react-icons/hi2";
 
 interface AdminSidebarProps {
@@ -58,6 +59,16 @@ const navigationGroups: NavigationGroup[] = [
         label: "Organizations",
         href: "/admin/organizations",
         icon: HiOutlineBuildingOffice2,
+      },
+    ],
+  },
+  {
+    label: "Incident Management",
+    items: [
+      {
+        label: "Incident Reports",
+        href: "/admin/incident-reports",
+        icon: HiOutlineExclamationTriangle,
       },
     ],
   },

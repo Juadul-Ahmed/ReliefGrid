@@ -132,7 +132,7 @@ export async function createOrganizationInvitation(
       headers: await headers(),
       body: {
         email,
-        role: role.toLowerCase(),
+        role: role === "ADMIN" ? "admin" : "member",
         organizationId,
       },
     });
