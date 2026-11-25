@@ -171,6 +171,43 @@ enum IncidentAttachmentVisibility {
   PARTICIPANTS
 }
 
+// ---------------- M4: EMERGENCY REQUESTS ----------------
+
+enum EmergencyRequestCategory {
+  FOOD
+  DRINKING_WATER
+  MEDICAL_SUPPLIES
+  SHELTER
+  RESCUE
+  TRANSPORTATION
+  OTHER
+}
+
+enum EmergencyRequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EmergencyRequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  IN_PROGRESS
+  PARTIALLY_FULFILLED
+  FULFILLED
+  COMPLETED
+}
+
+enum ResourceAllocationStatus {
+  ALLOCATED
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
 // ======================================================
 // BETTER AUTH
 // Keep Better Auth field names and model mappings intact.
@@ -225,6 +262,12 @@ model User {
   assignedIncidentAssignments IncidentAssignment[] @relation("AssignmentUser")
 
   uploadedIncidentAttachments IncidentAttachment[] @relation("AttachmentUploader")
+
+  // M4: Emergency request relationships
+  submittedEmergencyRequests EmergencyRequest[] @relation("EmergencyRequestSubmitter")
+  reviewedEmergencyRequests  EmergencyRequest[] @relation("EmergencyRequestReviewer")
+
+  allocatedResourceAllocations ResourceAllocation[] @relation("ResourceAllocationUser")
 
   @@unique([email])
   @@map("user")
@@ -312,6 +355,11 @@ model Organization {
 
   incidentUpdates IncidentUpdate[]
   incidentNotes   IncidentNote[]
+
+  // M4: Emergency request relationships
+  submittedEmergencyRequests EmergencyRequest[] @relation("EmergencyRequestOrganization")
+
+  providedResourceAllocations ResourceAllocation[] @relation("ResourceAllocationProvider")
 
   @@unique([slug])
   @@index([status])
@@ -608,6 +656,9 @@ model Incident {
   assignments   IncidentAssignment[]
   attachments   IncidentAttachment[]
 
+  // M4
+  emergencyRequests EmergencyRequest[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -877,4 +928,130 @@ model IncidentAttachment {
   @@index([uploadedById])
   @@index([visibility])
   @@map("incident_attachment")
+}
+
+// ======================================================
+// M4: EMERGENCY REQUEST
+// Standalone requests are allowed (incidentId is optional).
+// ======================================================
+
+model EmergencyRequest {
+  id String @id @default(cuid())
+
+  requestNumber String @unique
+
+  // Organization submitting the request
+  organizationId String
+  organization   Organization @relation("EmergencyRequestOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  // Request creator
+  submittedById String?
+  submittedBy   User? @relation("EmergencyRequestSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+
+  // Request reviewer
+  reviewedById String?
+  reviewedBy   User? @relation("EmergencyRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  // Optional incident relationship
+  incidentId String?
+  incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String
+
+  category EmergencyRequestCategory
+  priority EmergencyRequestPriority @default(MEDIUM)
+  status   EmergencyRequestStatus   @default(SUBMITTED)
+
+  // Request location
+  locationName String?
+  address      String?
+  latitude     Float?
+  longitude    Float?
+
+  requiredBy DateTime?
+
+  // Verification information
+  reviewedAt      DateTime?
+  rejectionReason String?
+
+  // Requested resources
+  items EmergencyRequestItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, priority])
+  @@index([incidentId])
+  @@index([submittedById])
+  @@index([reviewedById])
+  @@index([category, status])
+  @@map("emergency_request")
+}
+
+// ======================================================
+// M4: EMERGENCY REQUEST ITEM
+// One request can contain multiple requested resources.
+// ======================================================
+
+model EmergencyRequestItem {
+  id String @id @default(cuid())
+
+  requestId String
+  request   EmergencyRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  name        String
+  description String?
+
+  // Decimal quantities support fractional amounts, e.g. 2.5 litres.
+  quantity Decimal @db.Decimal(14, 3)
+  unit     String
+
+  allocations ResourceAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requestId])
+  @@map("emergency_request_item")
+}
+
+// ======================================================
+// M4: RESOURCE ALLOCATION
+// One row represents one organization providing part/all of an item.
+// Multiple organizations can fulfill the same requested item.
+// ======================================================
+
+model ResourceAllocation {
+  id String @id @default(cuid())
+
+  requestItemId String
+  requestItem   EmergencyRequestItem @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+
+  // Organization providing the resources
+  providerOrganizationId String
+  providerOrganization   Organization @relation("ResourceAllocationProvider", fields: [providerOrganizationId], references: [id], onDelete: Restrict)
+
+  // User recording or authorizing the allocation
+  allocatedById String?
+  allocatedBy   User? @relation("ResourceAllocationUser", fields: [allocatedById], references: [id], onDelete: SetNull)
+
+  quantity Decimal @db.Decimal(14, 3)
+
+  status ResourceAllocationStatus @default(ALLOCATED)
+
+  dispatchedAt DateTime?
+  deliveredAt  DateTime?
+
+  trackingReference String?
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requestItemId, status])
+  @@index([providerOrganizationId, status])
+  @@index([allocatedById])
+  @@map("resource_allocation")
 }
