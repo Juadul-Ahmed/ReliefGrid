@@ -26,6 +26,12 @@ export const allocateEmergencyResourcesSchema = z.object({
     emptyToUndefined,
     z.string().trim().max(500, "Notes cannot exceed 500 characters").optional(),
   ),
+
+  // Optional inventory linkage. When provided, stock is reserved atomically.
+  inventoryItemId: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().min(1, "Inventory item is required").optional(),
+  ),
 });
 
 export type AllocateEmergencyResourcesInput = z.input<

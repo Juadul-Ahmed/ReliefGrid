@@ -42,7 +42,8 @@ export async function allocateEmergencyResources(
       };
     }
 
-    const { requestId, itemId, quantity, notes } = validation.data;
+    const { requestId, itemId, quantity, notes, inventoryItemId } =
+      validation.data;
 
     const allocation = await prisma.$transaction(
       async (tx) => {
@@ -123,6 +124,50 @@ export async function allocateEmergencyResources(
           throw new Error("QUANTITY_EXCEEDS_REMAINING");
         }
 
+        // Validate linked inventory before mutating anything.
+        let inventoryId: string | null = null;
+        let inventoryUpdatedAt: Date | null = null;
+        let newReserved: Prisma.Decimal | null = null;
+
+        if (inventoryItemId) {
+          const inventory = await tx.inventoryItem.findFirst({
+            where: {
+              id: inventoryItemId,
+              organizationId: context.organizationId,
+            },
+            select: {
+              id: true,
+              onHand: true,
+              reserved: true,
+              isActive: true,
+              updatedAt: true,
+              resource: { select: { isActive: true } },
+            },
+          });
+
+          if (!inventory) {
+            throw new Error("INVENTORY_NOT_FOUND");
+          }
+
+          if (!inventory.isActive || !inventory.resource.isActive) {
+            throw new Error("INVENTORY_INACTIVE");
+          }
+
+          const available = new Prisma.Decimal(inventory.onHand).minus(
+            new Prisma.Decimal(inventory.reserved),
+          );
+
+          if (available.lessThan(requestedQuantity)) {
+            throw new Error("INVENTORY_INSUFFICIENT");
+          }
+
+          inventoryId = inventory.id;
+          inventoryUpdatedAt = inventory.updatedAt;
+          newReserved = new Prisma.Decimal(inventory.reserved).plus(
+            requestedQuantity,
+          );
+        }
+
         // Create the allocation.
         const created = await tx.resourceAllocation.create({
           data: {
@@ -135,6 +180,9 @@ export async function allocateEmergencyResources(
             quantity: requestedQuantity,
             status: "ALLOCATED",
             notes: notes ?? null,
+
+            // Optional inventory linkage (legacy allocations keep null).
+            inventoryItemId: inventoryItemId ?? null,
           },
           select: {
             id: true,
@@ -142,6 +190,35 @@ export async function allocateEmergencyResources(
             status: true,
           },
         });
+
+        // Reserve stock atomically once the allocation exists.
+        if (inventoryId && newReserved) {
+          const reserveResult = await tx.inventoryItem.updateMany({
+            where: {
+              id: inventoryId,
+              organizationId: context.organizationId,
+              updatedAt: inventoryUpdatedAt ?? undefined,
+            },
+            data: {
+              reserved: newReserved,
+            },
+          });
+
+          if (reserveResult.count !== 1) {
+            throw new Error("INVENTORY_CONCURRENT");
+          }
+
+          await tx.stockMovement.create({
+            data: {
+              inventoryItemId: inventoryId,
+              type: "RESERVE",
+              quantity: requestedQuantity,
+              reason: notes ?? "Allocation reservation",
+              resourceAllocationId: created.id,
+              actorUserId: context.session.user.id,
+            },
+          });
+        }
 
         // Record the allocation in the audit log.
         await tx.auditLog.create({
@@ -236,6 +313,33 @@ export async function allocateEmergencyResources(
             success: false,
             message:
               "Your allocation exceeds the remaining quantity. Please refresh and try again.",
+          };
+
+        case "INVENTORY_NOT_FOUND":
+          return {
+            success: false,
+            message: "Inventory not found or access denied.",
+          };
+
+        case "INVENTORY_INACTIVE":
+          return {
+            success: false,
+            message:
+              "The linked inventory or resource is inactive and cannot be allocated.",
+          };
+
+        case "INVENTORY_INSUFFICIENT":
+          return {
+            success: false,
+            message:
+              "There is not enough available stock to reserve this quantity.",
+          };
+
+        case "INVENTORY_CONCURRENT":
+          return {
+            success: false,
+            message:
+              "Inventory was updated by another request. Please refresh and try again.",
           };
       }
     }

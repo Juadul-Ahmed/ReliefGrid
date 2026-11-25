@@ -1,16 +1,32 @@
 
+import type { InventoryOverview } from "@/lib/inventory/queries";
+import type { DashboardStat } from "../types/dashboard.types";
 import { DashboardWelcome } from "./dashboard-welcome";
 import { DashboardStats } from "./dashboard-stats";
+import { LowStockPanel } from "./low-stock-panel";
 import { RecentIncidents } from "./recent-incidents";
 import { IncidentSeverity } from "./incident-severity";
 import { OperationalActivity } from "./operational-activity";
 
-export function DashboardOverview() {
+interface DashboardOverviewProps {
+  stats: DashboardStat[];
+  overview: InventoryOverview;
+}
+
+export function DashboardOverview({
+  stats,
+  overview,
+}: DashboardOverviewProps) {
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-6">
       <DashboardWelcome />
 
-      <DashboardStats />
+      <DashboardStats stats={stats} />
+
+      <LowStockPanel
+        lowStock={overview.lowStock}
+        outOfStock={overview.outOfStock}
+      />
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <RecentIncidents />

@@ -25,10 +25,9 @@ export function DashboardWelcome() {
       {/* Demo data notice */}
       <div className="rounded-lg border border-info/20 bg-info/5 px-4 py-3">
         <p className="text-sm text-info">
-          <span className="font-semibold">
-            Demo dashboard:
-          </span>{" "}
-          All figures and activities currently use illustrative data.
+          <span className="font-semibold">Live inventory:</span>{" "}
+          resource and stock statistics reflect your organization&apos;s real
+          data. Incidents, severity, and activity feeds remain illustrative.
         </p>
       </div>
     </section>

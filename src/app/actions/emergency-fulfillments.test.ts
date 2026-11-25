@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   auditCreate: vi.fn(),
   revalidatePath: vi.fn(),
+  inventoryFindFirst: vi.fn(),
+  inventoryUpdateMany: vi.fn(),
+  stockMovementCreate: vi.fn(),
 }));
 
 vi.mock("@/lib/permissions/require-organization-permission", () => ({
@@ -26,6 +29,11 @@ vi.mock("@/lib/db/prisma", () => ({
       aggregate: mocks.aggregate,
       create: mocks.create,
     },
+    inventoryItem: {
+      findFirst: mocks.inventoryFindFirst,
+      updateMany: mocks.inventoryUpdateMany,
+    },
+    stockMovement: { create: mocks.stockMovementCreate },
     auditLog: { create: mocks.auditCreate },
   },
 }));
@@ -48,8 +56,16 @@ function setup(overrides: {
       aggregate: mocks.aggregate,
       create: mocks.create,
     },
+    inventoryItem: {
+      findFirst: mocks.inventoryFindFirst,
+      updateMany: mocks.inventoryUpdateMany,
+    },
+    stockMovement: { create: mocks.stockMovementCreate },
     auditLog: { create: mocks.auditCreate },
   };
+
+  mocks.inventoryUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.stockMovementCreate.mockResolvedValue({});
 
   mocks.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) =>
     cb(tx),
@@ -212,5 +228,97 @@ describe("allocateEmergencyResources", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("reserves inventory stock and writes a RESERVE movement when linked", async () => {
+    setup({ committed: 0 });
+    mocks.inventoryFindFirst.mockResolvedValue({
+      id: "inv-1",
+      onHand: new Prisma.Decimal(20),
+      reserved: new Prisma.Decimal(2),
+      isActive: true,
+      updatedAt: new Date("2026-01-01"),
+      resource: { isActive: true },
+    });
+
+    const result = await allocateEmergencyResources({
+      requestId: "req-1",
+      itemId: "item-1",
+      quantity: 3,
+      inventoryItemId: "inv-1",
+    });
+
+    expect(result.success).toBe(true);
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ inventoryItemId: "inv-1" }),
+      }),
+    );
+    expect(mocks.inventoryUpdateMany).toHaveBeenCalledTimes(1);
+    const updateArg = mocks.inventoryUpdateMany.mock.calls[0][0];
+    expect(updateArg.data.reserved).toEqual(new Prisma.Decimal(5));
+    expect(mocks.stockMovementCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: "RESERVE",
+          quantity: new Prisma.Decimal(3),
+          resourceAllocationId: "alloc-1",
+        }),
+      }),
+    );
+  });
+
+  it("rejects allocation when linked inventory has insufficient available stock", async () => {
+    setup({ committed: 0 });
+    mocks.inventoryFindFirst.mockResolvedValue({
+      id: "inv-1",
+      onHand: new Prisma.Decimal(5),
+      reserved: new Prisma.Decimal(4),
+      isActive: true,
+      updatedAt: new Date("2026-01-01"),
+      resource: { isActive: true },
+    });
+
+    const result = await allocateEmergencyResources({
+      requestId: "req-1",
+      itemId: "item-1",
+      quantity: 2,
+      inventoryItemId: "inv-1",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("not enough available stock");
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.stockMovementCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects allocation when linked inventory is not found in the org", async () => {
+    setup({ committed: 0 });
+    mocks.inventoryFindFirst.mockResolvedValue(null);
+
+    const result = await allocateEmergencyResources({
+      requestId: "req-1",
+      itemId: "item-1",
+      quantity: 1,
+      inventoryItemId: "inv-missing",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("Inventory not found");
+  });
+
+  it("rejects allocation when linked inventory belongs to another org", async () => {
+    setup({ committed: 0 });
+    mocks.inventoryFindFirst.mockResolvedValue(null);
+
+    const result = await allocateEmergencyResources({
+      requestId: "req-1",
+      itemId: "item-1",
+      quantity: 1,
+      inventoryItemId: "inv-other-org",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("Inventory not found");
   });
 });

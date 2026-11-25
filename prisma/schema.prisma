@@ -1142,6 +1142,9 @@ model InventoryItem {
   reserved Decimal @db.Decimal(14, 3) @default(0)
   // available = onHand - reserved (derived, never stored)
 
+  // Optional low-stock alert threshold (organization/resource specific).
+  lowStockThreshold Decimal? @db.Decimal(14, 3)
+
   isActive Boolean @default(true)
 
   movements   StockMovement[]

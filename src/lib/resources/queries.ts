@@ -95,3 +95,30 @@ export async function getResourceById(
     },
   });
 }
+
+/**
+ * Returns the inventory item for a resource within the organization.
+ *
+ * Scoped by organizationId so another organization's inventory is never
+ * exposed. Returns null when no inventory has been initialized.
+ */
+export async function getInventoryByResource(
+  resourceId: string,
+  organizationId: string,
+) {
+  return prisma.inventoryItem.findFirst({
+    where: {
+      resourceId,
+      organizationId,
+    },
+    select: {
+      id: true,
+      onHand: true,
+      reserved: true,
+      lowStockThreshold: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+}

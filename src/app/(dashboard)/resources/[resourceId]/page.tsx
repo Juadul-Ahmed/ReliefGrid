@@ -4,9 +4,14 @@ import { HiOutlineArrowLeft } from "react-icons/hi2";
 
 import { requireOrganization } from "@/lib/permissions/organization";
 import { hasOrganizationPermission } from "@/lib/permissions/organization-permissions";
-import { getResourceById } from "@/lib/resources/queries";
+import { getResourceById, getInventoryByResource } from "@/lib/resources/queries";
+import { getStockMovementsForResource } from "@/lib/inventory/queries";
 import { EditResourceForm } from "@/components/resources/EditResourceForm";
 import { ResourceStatusToggle } from "@/components/resources/ResourceStatusToggle";
+import { InitializeInventoryForm } from "@/components/resources/InitializeInventoryForm";
+import { AdjustInventoryForm } from "@/components/resources/AdjustInventoryForm";
+import { SetLowStockThresholdForm } from "@/components/resources/SetLowStockThresholdForm";
+import { StockMovementHistory } from "@/components/resources/StockMovementHistory";
 
 interface ResourceDetailsPageProps {
   params: Promise<{
@@ -49,9 +54,31 @@ export default async function ResourceDetailsPage({
     notFound();
   }
 
-  const canManage = hasOrganizationPermission(
-    membership.role.toUpperCase(),
-    "MANAGE_RESOURCES",
+  const role = membership.role.toUpperCase();
+
+  const canManage = hasOrganizationPermission(role, "MANAGE_RESOURCES");
+
+  const canAdjust = hasOrganizationPermission(role, "ADJUST_INVENTORY");
+
+  const inventory = await getInventoryByResource(
+    resource.id,
+    organizationId,
+  );
+
+  const available = inventory
+    ? Number(inventory.onHand) - Number(inventory.reserved)
+    : 0;
+
+  const lowStockThreshold = inventory?.lowStockThreshold ?? null;
+
+  const isLowStock =
+    inventory !== null &&
+    lowStockThreshold !== null &&
+    available <= Number(lowStockThreshold);
+
+  const movements = await getStockMovementsForResource(
+    resource.id,
+    organizationId,
   );
 
   return (
@@ -117,6 +144,99 @@ export default async function ResourceDetailsPage({
             {resource.description ?? "No description provided."}
           </p>
         </div>
+      </section>
+
+      {/* Inventory */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Inventory</h2>
+          {isLowStock && (
+            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600">
+              Low stock
+            </span>
+          )}
+        </div>
+
+        {inventory ? (
+          <>
+            <div className="mt-5 grid gap-5 sm:grid-cols-3">
+              <DetailItem
+                label="On hand"
+                value={`${inventory.onHand.toNumber()} ${resource.unit}`}
+              />
+
+              <DetailItem
+                label="Reserved"
+                value={`${inventory.reserved.toNumber()} ${resource.unit}`}
+              />
+
+              <DetailItem
+                label="Available"
+                value={`${available} ${resource.unit}`}
+              />
+            </div>
+
+            <div className="mt-5">
+              <DetailItem
+                label="Low-stock threshold"
+                value={
+                  lowStockThreshold !== null
+                    ? `${Number(lowStockThreshold)} ${resource.unit}`
+                    : "Not set"
+                }
+              />
+            </div>
+
+            {canAdjust && (
+              <AdjustInventoryForm
+                inventoryItemId={inventory.id}
+                unit={resource.unit}
+              />
+            )}
+
+            {canAdjust && (
+              <SetLowStockThresholdForm
+                inventoryItemId={inventory.id}
+                currentThreshold={
+                  lowStockThreshold !== null
+                    ? Number(lowStockThreshold)
+                    : null
+                }
+                unit={resource.unit}
+              />
+            )}
+          </>
+        ) : (
+          <div className="mt-3">
+            <p className="text-sm text-muted">
+              No inventory has been initialized for this resource yet.
+            </p>
+
+            {canAdjust && (
+              <InitializeInventoryForm
+                resourceId={resource.id}
+                unit={resource.unit}
+              />
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Stock movement history */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-end">
+          <Link
+            href="/resources/movements"
+            className="text-sm text-primary hover:underline"
+          >
+            View all movements
+          </Link>
+        </div>
+
+        <StockMovementHistory
+          page={movements}
+          basePath={`/resources/${resource.id}`}
+        />
       </section>
 
       {/* Edit (OWNER/ADMIN only) */}
