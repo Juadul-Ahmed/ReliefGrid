@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { COMMITTED_ALLOCATION_STATUSES } from "@/lib/requests/fulfillment";
 import { getEmergencyRequestScope } from "@/lib/requests/queries";
 import { requireOrganizationPermission } from "@/lib/permissions/require-organization-permission";
 import { allocateEmergencyResourcesSchema } from "@/lib/validations/emergency-fulfillment.schema";
@@ -19,12 +20,6 @@ type AllocateEmergencyResourcesResult =
       message: string;
       allocationId: string;
     };
-
-const COMMITTED_ALLOCATION_STATUSES = [
-  "ALLOCATED",
-  "DISPATCHED",
-  "DELIVERED",
-] as const;
 
 export async function allocateEmergencyResources(
   formData: unknown,

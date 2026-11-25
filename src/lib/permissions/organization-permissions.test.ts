@@ -85,4 +85,57 @@ describe("Organization permissions", () => {
       hasOrganizationPermission("MEMBER", "RESPOND_TO_INCIDENT_INVITATIONS"),
     ).toBe(false);
   });
+
+  it("allows only OWNER and ADMIN to review emergency requests", () => {
+    expect(
+      hasOrganizationPermission("OWNER", "REVIEW_EMERGENCY_REQUEST"),
+    ).toBe(true);
+    expect(
+      hasOrganizationPermission("ADMIN", "REVIEW_EMERGENCY_REQUEST"),
+    ).toBe(true);
+    expect(
+      hasOrganizationPermission("MEMBER", "REVIEW_EMERGENCY_REQUEST"),
+    ).toBe(false);
+  });
+
+  it("allows only OWNER and ADMIN to allocate to emergency requests", () => {
+    expect(
+      hasOrganizationPermission("OWNER", "RESPOND_TO_EMERGENCY_REQUEST"),
+    ).toBe(true);
+    expect(
+      hasOrganizationPermission("ADMIN", "RESPOND_TO_EMERGENCY_REQUEST"),
+    ).toBe(true);
+    expect(
+      hasOrganizationPermission("MEMBER", "RESPOND_TO_EMERGENCY_REQUEST"),
+    ).toBe(false);
+  });
+
+  it("allows MEMBER to create and view emergency requests", () => {
+    expect(
+      hasOrganizationPermission("MEMBER", "CREATE_EMERGENCY_REQUEST"),
+    ).toBe(true);
+    expect(
+      hasOrganizationPermission("MEMBER", "VIEW_EMERGENCY_REQUESTS"),
+    ).toBe(true);
+  });
+
+  it("allows all roles to view resources", () => {
+    const roles = ["OWNER", "ADMIN", "MEMBER"] as const;
+
+    roles.forEach((role) => {
+      expect(hasOrganizationPermission(role, "VIEW_RESOURCES")).toBe(true);
+    });
+  });
+
+  it("allows only OWNER and ADMIN to manage resources", () => {
+    expect(hasOrganizationPermission("OWNER", "MANAGE_RESOURCES")).toBe(true);
+    expect(hasOrganizationPermission("ADMIN", "MANAGE_RESOURCES")).toBe(true);
+    expect(hasOrganizationPermission("MEMBER", "MANAGE_RESOURCES")).toBe(false);
+  });
+
+  it("allows only OWNER and ADMIN to adjust inventory", () => {
+    expect(hasOrganizationPermission("OWNER", "ADJUST_INVENTORY")).toBe(true);
+    expect(hasOrganizationPermission("ADMIN", "ADJUST_INVENTORY")).toBe(true);
+    expect(hasOrganizationPermission("MEMBER", "ADJUST_INVENTORY")).toBe(false);
+  });
 });

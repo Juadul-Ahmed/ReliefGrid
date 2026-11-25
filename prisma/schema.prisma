@@ -208,6 +208,26 @@ enum ResourceAllocationStatus {
   CANCELLED
 }
 
+// ---------------- M5: RESOURCES & INVENTORY ----------------
+
+enum ResourceCategory {
+  FOOD
+  DRINKING_WATER
+  MEDICAL_SUPPLIES
+  SHELTER
+  RESCUE
+  TRANSPORTATION
+  OTHER
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  RESERVE
+  RELEASE
+  ADJUST
+}
+
 // ======================================================
 // BETTER AUTH
 // Keep Better Auth field names and model mappings intact.
@@ -268,6 +288,9 @@ model User {
   reviewedEmergencyRequests  EmergencyRequest[] @relation("EmergencyRequestReviewer")
 
   allocatedResourceAllocations ResourceAllocation[] @relation("ResourceAllocationUser")
+
+  // M5: Stock ledger actor
+  stockMovements StockMovement[] @relation("StockMovementActor")
 
   @@unique([email])
   @@map("user")
@@ -360,6 +383,10 @@ model Organization {
   submittedEmergencyRequests EmergencyRequest[] @relation("EmergencyRequestOrganization")
 
   providedResourceAllocations ResourceAllocation[] @relation("ResourceAllocationProvider")
+
+  // M5: Resource & inventory relationships
+  resources      Resource[]      @relation("ResourceOrganization")
+  inventoryItems InventoryItem[] @relation("InventoryOrganization")
 
   @@unique([slug])
   @@index([status])
@@ -1047,11 +1074,118 @@ model ResourceAllocation {
   trackingReference String?
   notes             String?
 
+  // M5: Optional link to the provider's inventory item.
+  // Nullable so existing M4 allocations remain valid.
+  // Composite FK guarantees the inventory belongs to providerOrganizationId.
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId, providerOrganizationId], references: [id, organizationId], onDelete: Restrict)
+
+  stockMovements StockMovement[] @relation("StockMovementAllocation")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([requestItemId, status])
   @@index([providerOrganizationId, status])
   @@index([allocatedById])
+  @@index([inventoryItemId])
   @@map("resource_allocation")
+}
+
+// ======================================================
+// M5: RESOURCE CATALOG
+// Organization-owned resource definitions (never global).
+// ======================================================
+
+model Resource {
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation("ResourceOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  name        String
+  category    ResourceCategory
+  unit        String
+  description String?
+  sku         String?
+  isActive    Boolean  @default(true)
+
+  inventoryItems InventoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, name])
+  // Redundant with @id, but required as a composite FK target.
+  @@unique([id, organizationId])
+  @@index([organizationId, category])
+  @@index([organizationId, isActive])
+  @@map("resource")
+}
+
+// ======================================================
+// M5: INVENTORY ITEM
+// Exactly one stock row per organization/resource.
+// ======================================================
+
+model InventoryItem {
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation("InventoryOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  resourceId String
+  // Composite FK guarantees the resource belongs to the same organization.
+  resource   Resource @relation(fields: [resourceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  onHand   Decimal @db.Decimal(14, 3) @default(0)
+  reserved Decimal @db.Decimal(14, 3) @default(0)
+  // available = onHand - reserved (derived, never stored)
+
+  isActive Boolean @default(true)
+
+  movements   StockMovement[]
+  allocations ResourceAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, resourceId])
+  // Redundant with @id, but required as a composite FK target.
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@map("inventory_item")
+}
+
+// ======================================================
+// M5: STOCK MOVEMENT
+// Append-only stock ledger. Rows are never updated or deleted.
+// ======================================================
+
+model StockMovement {
+  id String @id @default(cuid())
+
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  type     StockMovementType
+  quantity Decimal @db.Decimal(14, 3)
+
+  reason String?
+
+  // Preserve the link to the allocation that caused the movement.
+  resourceAllocationId String?
+  resourceAllocation   ResourceAllocation? @relation("StockMovementAllocation", fields: [resourceAllocationId], references: [id], onDelete: Restrict)
+
+  actorUserId String?
+  actor       User?   @relation("StockMovementActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([inventoryItemId, createdAt])
+  @@index([type])
+  @@index([resourceAllocationId])
+  @@index([actorUserId])
+  @@map("stock_movement")
 }

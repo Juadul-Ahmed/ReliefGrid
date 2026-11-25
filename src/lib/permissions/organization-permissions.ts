@@ -16,7 +16,10 @@ export type OrganizationPermission =
   | "VIEW_EMERGENCY_REQUESTS"
   | "CREATE_EMERGENCY_REQUEST"
   | "REVIEW_EMERGENCY_REQUEST"
-  | "RESPOND_TO_EMERGENCY_REQUEST";
+  | "RESPOND_TO_EMERGENCY_REQUEST"
+  | "VIEW_RESOURCES"
+  | "MANAGE_RESOURCES"
+  | "ADJUST_INVENTORY";
 
 const validOrganizationRoles: OrganizationRole[] = [
   "OWNER",
@@ -44,6 +47,9 @@ const organizationPermissions: Record<
     "CREATE_EMERGENCY_REQUEST",
     "REVIEW_EMERGENCY_REQUEST",
     "RESPOND_TO_EMERGENCY_REQUEST",
+    "VIEW_RESOURCES",
+    "MANAGE_RESOURCES",
+    "ADJUST_INVENTORY",
   ],
 
   ADMIN: [
@@ -60,6 +66,9 @@ const organizationPermissions: Record<
     "CREATE_EMERGENCY_REQUEST",
     "REVIEW_EMERGENCY_REQUEST",
     "RESPOND_TO_EMERGENCY_REQUEST",
+    "VIEW_RESOURCES",
+    "MANAGE_RESOURCES",
+    "ADJUST_INVENTORY",
   ],
 
   MEMBER: [
@@ -67,6 +76,7 @@ const organizationPermissions: Record<
     "CREATE_INCIDENT",
     "VIEW_EMERGENCY_REQUESTS",
     "CREATE_EMERGENCY_REQUEST",
+    "VIEW_RESOURCES",
   ],
 };
 

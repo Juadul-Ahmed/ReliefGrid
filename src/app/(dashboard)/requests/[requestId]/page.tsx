@@ -8,16 +8,16 @@ import { getEmergencyRequestById } from "@/lib/requests/detail-queries";
 
 import { OfferFulfillmentForm } from "@/components/requests/OfferFulfillmentForm";
 import { EmergencyRequestReviewPanel } from "@/components/requests/EmergencyRequestReviewPanel";
+import { AllocationStatusActions } from "@/components/requests/AllocationStatusActions";
+import {
+  COMMITTED_ALLOCATION_STATUSES,
+  summarizeFulfillment,
+  summarizeRequestFulfillment,
+} from "@/lib/requests/fulfillment";
 
 interface RequestDetailsPageProps {
   params: Promise<{ requestId: string }>;
 }
-
-const COMMITTED_ALLOCATION_STATUSES = [
-  "ALLOCATED",
-  "DISPATCHED",
-  "DELIVERED",
-] as const;
 
 function label(value: string) {
   return value.replaceAll("_", " ");
@@ -113,6 +113,20 @@ export default async function EmergencyRequestDetailsPage({
       "RESPOND_TO_EMERGENCY_REQUEST",
     );
 
+  // Only the provider organization (with the right permission) may manage its
+  // own allocations. Non-requesters only ever see their own allocations.
+  const canManageAllocations =
+    !isRequester &&
+    hasOrganizationPermission(role, "RESPOND_TO_EMERGENCY_REQUEST");
+
+  // Request-level fulfillment progress derived from allocations.
+  const fulfillment = summarizeRequestFulfillment(
+    request.items.map((item) => ({
+      quantity: item.quantity,
+      allocations: item.allocations,
+    })),
+  );
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
@@ -158,6 +172,36 @@ export default async function EmergencyRequestDetailsPage({
           </div>
         </div>
       </div>
+
+      {/* Fulfillment progress */}
+      <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Fulfillment progress</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Derived from resource allocations. A request is only fully
+              fulfilled once resources are delivered.
+            </p>
+          </div>
+
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(fulfillment.derivedStatus)}`}
+          >
+            {label(fulfillment.derivedStatus)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 text-xs text-muted">
+          <span>{fulfillment.progress}% delivered</span>
+        </div>
+
+        <div className="h-2 overflow-hidden rounded-full bg-muted/10">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${fulfillment.progress}%` }}
+          />
+        </div>
+      </section>
 
       {/* Request review */}
       {canReview && (
@@ -262,42 +306,13 @@ export default async function EmergencyRequestDetailsPage({
         </div>
 
         {request.items.map((item) => {
-          // Prisma Decimal arithmetic preserves quantity precision.
-          const requested = item.quantity;
+          const summary = summarizeFulfillment(item.quantity, item.allocations);
 
-          const committed = item.allocations
-            .filter((allocation) =>
-              COMMITTED_ALLOCATION_STATUSES.includes(
-                allocation.status as (typeof COMMITTED_ALLOCATION_STATUSES)[number],
-              ),
-            )
-            .reduce(
-              (total, allocation) => total.plus(allocation.quantity),
-              requested.minus(requested),
-            );
-
-          const delivered = item.allocations
-            .filter((allocation) => allocation.status === "DELIVERED")
-            .reduce(
-              (total, allocation) => total.plus(allocation.quantity),
-              requested.minus(requested),
-            );
-
-          const remaining = requested.minus(committed);
-
-          const requestedNumber = requested.toNumber();
-          const deliveredNumber = delivered.toNumber();
-          const remainingNumber = Math.max(0, remaining.toNumber());
-
-          const progress =
-            requestedNumber > 0
-              ? Math.min(
-                  100,
-                  Math.round(
-                    (deliveredNumber / requestedNumber) * 100,
-                  ),
-                )
-              : 0;
+          const requestedNumber = summary.requested;
+          const committedNumber = summary.committed;
+          const deliveredNumber = summary.delivered;
+          const remainingNumber = summary.remaining;
+          const progress = summary.progress;
 
           const hasActiveAllocation = item.allocations.some(
             (allocation) =>
@@ -331,7 +346,37 @@ export default async function EmergencyRequestDetailsPage({
 
               {/* Progress */}
               <div className="mt-4">
-                <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <p className="text-xs text-muted">Requested</p>
+                    <p className="mt-0.5 text-sm font-medium">
+                      {formatQuantity(requestedNumber)} {item.unit}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">Committed</p>
+                    <p className="mt-0.5 text-sm font-medium">
+                      {formatQuantity(committedNumber)} {item.unit}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">Delivered</p>
+                    <p className="mt-0.5 text-sm font-medium">
+                      {formatQuantity(deliveredNumber)} {item.unit}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">Remaining</p>
+                    <p className="mt-0.5 text-sm font-medium">
+                      {formatQuantity(remainingNumber)} {item.unit}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted">
                   <span>
                     {formatQuantity(deliveredNumber)} of{" "}
                     {formatQuantity(requestedNumber)} {item.unit} delivered
@@ -342,20 +387,9 @@ export default async function EmergencyRequestDetailsPage({
 
                 <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted/10">
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${progress}%` }}
                   />
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                  <span>
-                    Allocated / committed:{" "}
-                    {formatQuantity(committed.toNumber())} {item.unit}
-                  </span>
-
-                  <span>
-                    Remaining: {formatQuantity(remainingNumber)} {item.unit}
-                  </span>
                 </div>
               </div>
 
@@ -414,11 +448,22 @@ export default async function EmergencyRequestDetailsPage({
                         )}
                       </div>
 
-                      <span
-                        className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(allocation.status)}`}
-                      >
-                        {label(allocation.status)}
-                      </span>
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <span
+                          className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(allocation.status)}`}
+                        >
+                          {label(allocation.status)}
+                        </span>
+
+                        {canManageAllocations &&
+                          allocation.providerOrganizationId ===
+                            organizationId && (
+                            <AllocationStatusActions
+                              allocationId={allocation.id}
+                              status={allocation.status}
+                            />
+                          )}
+                      </div>
                     </div>
                   ))}
                 </div>
