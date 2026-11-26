@@ -4,16 +4,10 @@ import { notFound } from "next/navigation";
 
 import { requireOrganization } from "@/lib/permissions/organization";
 import { hasOrganizationPermission } from "@/lib/permissions/organization-permissions";
-import { Prisma } from "@/generated/prisma/client";
 
-import { OfferFulfillmentForm } from "@/components/requests/OfferFulfillmentForm";
 import { EmergencyRequestReviewPanel } from "@/components/requests/EmergencyRequestReviewPanel";
 import { getEmergencyRequestById } from "@/lib/requests/detail-queries";
-import { prisma } from "@/lib/db/prisma";
-import { MultiAllocateForm } from "@/components/requests/MultiAllocateForm";
-import { AllocationStatusActions } from "@/components/requests/AllocationStatusActions";
 import {
-  COMMITTED_ALLOCATION_STATUSES,
   summarizeFulfillment,
   summarizeRequestFulfillment,
 } from "@/lib/requests/fulfillment";
@@ -106,44 +100,6 @@ export default async function EmergencyRequestDetailsPage({
     ) &&
     (request.status === "SUBMITTED" ||
       request.status === "UNDER_REVIEW");
-
-  // Only authorized external organizations can allocate resources.
-  const canRespond =
-    !isRequester &&
-    request.status === "VERIFIED" &&
-    hasOrganizationPermission(
-      role,
-      "RESPOND_TO_EMERGENCY_REQUEST",
-    );
-
-  // Only the provider organization (with the right permission) may manage its
-  // own allocations. Non-requesters only ever see their own allocations.
-  const canManageAllocations =
-    !isRequester &&
-    hasOrganizationPermission(role, "RESPOND_TO_EMERGENCY_REQUEST");
-
-  // Fetch active inventory for the current provider organization (only when canRespond)
-  const providerInventory = canRespond
-    ? await prisma.inventoryItem.findMany({
-        where: { organizationId, isActive: true },
-        orderBy: { updatedAt: "desc" },
-        take: 100,
-        select: {
-          id: true,
-          onHand: true,
-          reserved: true,
-          resource: { select: { name: true, unit: true, isActive: true } },
-        },
-      })
-    : [];
-
-  const inventoryOptions = providerInventory
-    .filter((iv) => iv.resource.isActive)
-    .map((iv) => ({
-      id: iv.id,
-      name: `${iv.resource.name} (${iv.resource.unit})`,
-      available: new Prisma.Decimal(iv.onHand).minus(new Prisma.Decimal(iv.reserved)).toString(),
-    }));
 
   // Request-level fulfillment progress derived from allocations.
   const fulfillment = summarizeRequestFulfillment(
@@ -319,18 +275,6 @@ export default async function EmergencyRequestDetailsPage({
         </div>
       </section>
 
-      {/* Multi-item allocation */}
-      {canRespond && request.items.some((i) => i.quantity.toNumber() > 0) && (
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <h2 className="mb-3 text-sm font-semibold">Allocate resources (multi-item)</h2>
-          <MultiAllocateForm
-            requestId={request.id}
-            items={request.items.map((i) => ({ id: i.id, name: i.name, unit: i.unit, quantity: i.quantity.toString() }))}
-            inventory={inventoryOptions}
-          />
-        </section>
-      )}
-
       {/* Requested items */}
       <section className="space-y-4">
         <div>
@@ -351,19 +295,6 @@ export default async function EmergencyRequestDetailsPage({
           const deliveredNumber = summary.delivered;
           const remainingNumber = summary.remaining;
           const progress = summary.progress;
-
-          const hasActiveAllocation = item.allocations.some(
-            (allocation) =>
-              allocation.providerOrganizationId === organizationId &&
-              COMMITTED_ALLOCATION_STATUSES.includes(
-                allocation.status as (typeof COMMITTED_ALLOCATION_STATUSES)[number],
-              ),
-          );
-
-          const showAllocationForm =
-            canRespond &&
-            remainingNumber > 0 &&
-            !hasActiveAllocation;
 
   return (
             <article
@@ -492,29 +423,10 @@ export default async function EmergencyRequestDetailsPage({
                         >
                           {label(allocation.status)}
                         </span>
-
-                        {canManageAllocations &&
-                          allocation.providerOrganizationId ===
-                            organizationId && (
-                            <AllocationStatusActions
-                              allocationId={allocation.id}
-                              allocationStatus={allocation.status}
-                              items={allocation.items}
-                            />
-                          )}
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-
-              {showAllocationForm && (
-                <OfferFulfillmentForm
-                  requestId={request.id}
-                  itemId={item.id}
-                  unit={item.unit}
-                  maxQuantity={remainingNumber}
-                />
               )}
             </article>
           );

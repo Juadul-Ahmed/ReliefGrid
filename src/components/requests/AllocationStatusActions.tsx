@@ -10,9 +10,9 @@ import { deliverAllocationItem } from "@/app/actions/m6-deliver";
 
 interface AllocationItem {
   id: string;
-  quantity: { toNumber: () => number };
-  dispatchedQuantity: { toNumber: () => number };
-  deliveredQuantity: { toNumber: () => number };
+  quantity: string;
+  dispatchedQuantity: string;
+  deliveredQuantity: string;
   status: string;
   inventoryItemId: string;
 }
@@ -56,7 +56,7 @@ export function AllocationStatusActions({
       toast.error("Enter a quantity to dispatch");
       return;
     }
-    const remaining = item.quantity.toNumber() - item.dispatchedQuantity.toNumber();
+    const remaining = Number(item.quantity) - Number(item.dispatchedQuantity);
     if (Number(qty) > remaining) {
       toast.error(`Cannot dispatch more than remaining (${remaining})`);
       return;
@@ -79,7 +79,7 @@ export function AllocationStatusActions({
 
   function handleDeliver(item: AllocationItem) {
     const qty = deliverQtys[item.id] ?? "";
-    const remaining = item.quantity.toNumber() - item.deliveredQuantity.toNumber();
+    const remaining = Number(item.quantity) - Number(item.deliveredQuantity);
     if (qty && (Number(qty) <= 0 || Number(qty) > remaining)) {
       toast.error(`Enter a quantity between 1 and ${remaining}`);
       return;
@@ -108,9 +108,9 @@ export function AllocationStatusActions({
   return (
     <div className="space-y-3">
       {items.map((item) => {
-        const allocated = item.quantity.toNumber();
-        const dispatched = item.dispatchedQuantity.toNumber();
-        const delivered = item.deliveredQuantity.toNumber();
+        const allocated = Number(item.quantity);
+        const dispatched = Number(item.dispatchedQuantity);
+        const delivered = Number(item.deliveredQuantity);
         const remainingToDispatch = allocated - dispatched;
         const remainingToDeliver = allocated - delivered;
         const canDispatch = allocationStatus === "ALLOCATED" && remainingToDispatch > 0;
