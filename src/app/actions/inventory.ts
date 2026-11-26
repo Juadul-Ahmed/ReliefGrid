@@ -116,6 +116,7 @@ export async function initializeInventory(
             await tx.stockMovement.create({
               data: {
                 inventoryItemId: created.id,
+                organizationId: context.organizationId,
                 type: "IN",
                 quantity: onHand,
                 reason,
@@ -264,6 +265,7 @@ export async function adjustInventory(
           await tx.stockMovement.create({
             data: {
               inventoryItemId: item.id,
+              organizationId: context.organizationId,
               type: "ADJUST",
               quantity: delta,
               reason,

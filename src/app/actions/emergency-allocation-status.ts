@@ -186,6 +186,7 @@ export async function updateAllocationStatus(
               await tx.stockMovement.create({
                 data: {
                   inventoryItemId: inventory.id,
+                  organizationId: context.organizationId,
                   type: movement.type,
                   quantity: movement.quantity,
                   reason: `Allocation ${status.toLowerCase()}`,

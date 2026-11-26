@@ -173,6 +173,9 @@ export async function allocateEmergencyResources(
           data: {
             requestItemId: item.id,
 
+            // Request identity comes from the authorized request lookup.
+            requestId: request.id,
+
             // Provider identity comes from the authenticated session.
             providerOrganizationId: context.organizationId,
             allocatedById: context.session.user.id,
@@ -211,6 +214,7 @@ export async function allocateEmergencyResources(
           await tx.stockMovement.create({
             data: {
               inventoryItemId: inventoryId,
+              organizationId: context.organizationId,
               type: "RESERVE",
               quantity: requestedQuantity,
               reason: notes ?? "Allocation reservation",

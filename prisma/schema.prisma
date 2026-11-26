@@ -228,6 +228,29 @@ enum StockMovementType {
   ADJUST
 }
 
+// ---------------- M6: ALLOCATION & DISTRIBUTION LIFECYCLE ----------------
+
+enum AllocationItemStatus {
+  ALLOCATED
+  PARTIALLY_DISPATCHED
+  DISPATCHED
+  PARTIALLY_DELIVERED
+  DELIVERED
+  CANCELLED
+}
+
+enum ResourceDistributionStatus {
+  PENDING
+  DISPATCHED
+  CANCELLED
+}
+
+enum ResourceDeliveryStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
 // ======================================================
 // BETTER AUTH
 // Keep Better Auth field names and model mappings intact.
@@ -291,6 +314,9 @@ model User {
 
   // M5: Stock ledger actor
   stockMovements StockMovement[] @relation("StockMovementActor")
+
+  // M6: Deliveries received by this user
+  receivedDeliveries ResourceDelivery[] @relation("DeliveryReceiver")
 
   @@unique([email])
   @@map("user")
@@ -387,6 +413,12 @@ model Organization {
   // M5: Resource & inventory relationships
   resources      Resource[]      @relation("ResourceOrganization")
   inventoryItems InventoryItem[] @relation("InventoryOrganization")
+
+  // M6: Batch, distribution, delivery, and ledger ownership
+  batches        InventoryBatch[]       @relation("BatchOrganization")
+  distributions  ResourceDistribution[] @relation("DistributionProvider")
+  deliveries     ResourceDelivery[]     @relation("DeliveryProvider")
+  stockMovements StockMovement[]        @relation("StockMovementOrganization")
 
   @@unique([slug])
   @@index([status])
@@ -973,11 +1005,11 @@ model EmergencyRequest {
 
   // Request creator
   submittedById String?
-  submittedBy   User? @relation("EmergencyRequestSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedBy   User?   @relation("EmergencyRequestSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
 
   // Request reviewer
   reviewedById String?
-  reviewedBy   User? @relation("EmergencyRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedBy   User?   @relation("EmergencyRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   // Optional incident relationship
   incidentId String?
@@ -1037,9 +1069,12 @@ model EmergencyRequestItem {
 
   allocations ResourceAllocation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  resourceAllocationItems ResourceAllocationItem[]
 
+  // Redundant target for composite request/item foreign keys.
+  @@unique([id, requestId])
   @@index([requestId])
   @@map("emergency_request_item")
 }
@@ -1054,7 +1089,8 @@ model ResourceAllocation {
   id String @id @default(cuid())
 
   requestItemId String
-  requestItem   EmergencyRequestItem @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+  requestId     String
+  requestItem   EmergencyRequestItem @relation(fields: [requestItemId, requestId], references: [id, requestId], onDelete: Restrict)
 
   // Organization providing the resources
   providerOrganizationId String
@@ -1062,7 +1098,7 @@ model ResourceAllocation {
 
   // User recording or authorizing the allocation
   allocatedById String?
-  allocatedBy   User? @relation("ResourceAllocationUser", fields: [allocatedById], references: [id], onDelete: SetNull)
+  allocatedBy   User?   @relation("ResourceAllocationUser", fields: [allocatedById], references: [id], onDelete: SetNull)
 
   quantity Decimal @db.Decimal(14, 3)
 
@@ -1082,9 +1118,15 @@ model ResourceAllocation {
 
   stockMovements StockMovement[] @relation("StockMovementAllocation")
 
+  // M6: allocation item children and distributions
+  items         ResourceAllocationItem[]
+  distributions ResourceDistribution[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Redundant target so an allocation item can prove same allocation + provider.
+  @@unique([id, providerOrganizationId])
   @@index([requestItemId, status])
   @@index([providerOrganizationId, status])
   @@index([allocatedById])
@@ -1108,7 +1150,7 @@ model Resource {
   unit        String
   description String?
   sku         String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean          @default(true)
 
   inventoryItems InventoryItem[]
 
@@ -1138,8 +1180,8 @@ model InventoryItem {
   // Composite FK guarantees the resource belongs to the same organization.
   resource   Resource @relation(fields: [resourceId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
-  onHand   Decimal @db.Decimal(14, 3) @default(0)
-  reserved Decimal @db.Decimal(14, 3) @default(0)
+  onHand   Decimal @default(0) @db.Decimal(14, 3)
+  reserved Decimal @default(0) @db.Decimal(14, 3)
   // available = onHand - reserved (derived, never stored)
 
   // Optional low-stock alert threshold (organization/resource specific).
@@ -1147,8 +1189,10 @@ model InventoryItem {
 
   isActive Boolean @default(true)
 
-  movements   StockMovement[]
-  allocations ResourceAllocation[]
+  movements       StockMovement[]
+  allocations     ResourceAllocation[]
+  batches         InventoryBatch[]
+  allocationItems ResourceAllocationItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1170,10 +1214,21 @@ model StockMovement {
   id String @id @default(cuid())
 
   inventoryItemId String
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  // Composite FK guarantees the movement stays in the inventory's organization.
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  organizationId String
+  organization   Organization @relation("StockMovementOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  // M6: optional batch and allocation-item references.
+  inventoryBatchId String?
+  inventoryBatch   InventoryBatch? @relation(fields: [inventoryBatchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  resourceAllocationItemId String?
+  resourceAllocationItem   ResourceAllocationItem? @relation(fields: [resourceAllocationItemId, inventoryItemId], references: [id, inventoryItemId], onDelete: Restrict)
 
   type     StockMovementType
-  quantity Decimal @db.Decimal(14, 3)
+  quantity Decimal           @db.Decimal(14, 3)
 
   reason String?
 
@@ -1190,5 +1245,240 @@ model StockMovement {
   @@index([type])
   @@index([resourceAllocationId])
   @@index([actorUserId])
+  @@index([organizationId])
+  @@index([inventoryBatchId])
+  @@index([resourceAllocationItemId])
   @@map("stock_movement")
+}
+
+// ======================================================
+// M6: ALLOCATION ITEM
+// One row per provider/allocation/inventory-item line.
+// ======================================================
+
+model ResourceAllocationItem {
+  id String @id @default(cuid())
+
+  resourceAllocationId String
+  resourceAllocation   ResourceAllocation @relation(fields: [resourceAllocationId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  providerOrganizationId String
+
+  requestItemId String
+  requestId     String
+  requestItem   EmergencyRequestItem @relation(fields: [requestItemId, requestId], references: [id, requestId], onDelete: Restrict)
+
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId, providerOrganizationId], references: [id, organizationId], onDelete: Restrict)
+
+  quantity           Decimal @db.Decimal(14, 3)
+  dispatchedQuantity Decimal @default(0) @db.Decimal(14, 3)
+  deliveredQuantity  Decimal @default(0) @db.Decimal(14, 3)
+
+  status AllocationItemStatus @default(ALLOCATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations      InventoryBatchReservation[]
+  distributionItems ResourceDistributionItem[]
+  stockMovements    StockMovement[]
+
+  @@unique([id, inventoryItemId])
+  @@unique([id, resourceAllocationId, inventoryItemId])
+  @@index([resourceAllocationId])
+  @@index([inventoryItemId])
+  @@index([status])
+  @@map("resource_allocation_item")
+}
+
+// ======================================================
+// M6: INVENTORY BATCH
+// Batch-level physical inventory and expiration tracking.
+// ======================================================
+
+model InventoryBatch {
+  id String @id @default(cuid())
+
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  organizationId String
+  organization   Organization @relation("BatchOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  batchNumber String
+  expiresAt   DateTime?
+  onHand      Decimal   @default(0) @db.Decimal(14, 3)
+  reserved    Decimal   @default(0) @db.Decimal(14, 3)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations              InventoryBatchReservation[]
+  stockMovements            StockMovement[]
+  resourceDistributionItems ResourceDistributionItem[]
+
+  @@unique([id, inventoryItemId])
+  @@unique([id, organizationId])
+  @@unique([inventoryItemId, batchNumber])
+  @@index([inventoryItemId, expiresAt])
+  @@index([organizationId])
+  @@map("inventory_batch")
+}
+
+// ======================================================
+// M6: INVENTORY BATCH RESERVATION
+// Option B: tenant ownership is derived through the
+// allocation item and batch; no duplicated provider column.
+// ======================================================
+
+model InventoryBatchReservation {
+  id String @id @default(cuid())
+
+  resourceAllocationItemId String
+  resourceAllocationItem   ResourceAllocationItem @relation(fields: [resourceAllocationItemId, inventoryItemId], references: [id, inventoryItemId], onDelete: Restrict)
+
+  inventoryBatchId String
+  inventoryBatch   InventoryBatch @relation(fields: [inventoryBatchId, inventoryItemId], references: [id, inventoryItemId], onDelete: Restrict)
+
+  inventoryItemId String
+
+  reservedQuantity Decimal @db.Decimal(14, 3)
+  releasedQuantity Decimal @default(0) @db.Decimal(14, 3)
+  consumedQuantity Decimal @default(0) @db.Decimal(14, 3)
+
+  createdAt DateTime @default(now())
+
+  @@index([resourceAllocationItemId])
+  @@index([inventoryBatchId])
+  @@index([inventoryItemId])
+  @@map("inventory_batch_reservation")
+}
+
+// ======================================================
+// M6: RESOURCE DISTRIBUTION
+// One dispatch event for an allocation.
+// ======================================================
+
+model ResourceDistribution {
+  id String @id @default(cuid())
+
+  resourceAllocationId String
+  resourceAllocation   ResourceAllocation @relation(fields: [resourceAllocationId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  providerOrganizationId String
+  providerOrganization   Organization @relation("DistributionProvider", fields: [providerOrganizationId], references: [id], onDelete: Restrict)
+
+  status            ResourceDistributionStatus @default(PENDING)
+  trackingReference String?
+  notes             String?
+  dispatchedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items      ResourceDistributionItem[]
+  deliveries ResourceDelivery[]
+
+  @@unique([id, resourceAllocationId])
+  @@unique([id, providerOrganizationId])
+  @@index([resourceAllocationId])
+  @@index([providerOrganizationId])
+  @@map("resource_distribution")
+}
+
+// ======================================================
+// M6: RESOURCE DISTRIBUTION ITEM
+// One line of a distribution, tied to the exact
+// allocation item, batch, and provider organization.
+// ======================================================
+
+model ResourceDistributionItem {
+  id String @id @default(cuid())
+
+  resourceDistributionId String
+  resourceDistribution   ResourceDistribution @relation(fields: [resourceDistributionId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  resourceAllocationItemId String
+  resourceAllocationItem   ResourceAllocationItem @relation(fields: [resourceAllocationItemId, resourceAllocationId, inventoryItemId], references: [id, resourceAllocationId, inventoryItemId], onDelete: Restrict)
+
+  inventoryBatchId String
+  inventoryBatch   InventoryBatch @relation(fields: [inventoryBatchId, inventoryItemId], references: [id, inventoryItemId], onDelete: Restrict)
+
+  resourceAllocationId   String
+  inventoryItemId        String
+  providerOrganizationId String
+
+  quantity Decimal @db.Decimal(14, 3)
+
+  createdAt DateTime @default(now())
+
+  deliveryItems ResourceDeliveryItem[]
+
+  @@unique([id, resourceDistributionId])
+  @@unique([id, providerOrganizationId])
+  @@index([resourceDistributionId])
+  @@index([resourceAllocationItemId])
+  @@index([inventoryBatchId])
+  @@map("resource_distribution_item")
+}
+
+// ======================================================
+// M6: RESOURCE DELIVERY
+// One delivery event for a distribution.
+// ======================================================
+
+model ResourceDelivery {
+  id String @id @default(cuid())
+
+  resourceDistributionId String
+  resourceDistribution   ResourceDistribution @relation(fields: [resourceDistributionId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  providerOrganizationId String
+  providerOrganization   Organization @relation("DeliveryProvider", fields: [providerOrganizationId], references: [id], onDelete: Restrict)
+
+  status            ResourceDeliveryStatus @default(PENDING)
+  deliveredAt       DateTime?
+  receivedById      String?
+  receivedBy        User?                  @relation("DeliveryReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+  trackingReference String?
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items ResourceDeliveryItem[]
+
+  @@unique([id, resourceDistributionId])
+  @@unique([id, providerOrganizationId])
+  @@index([resourceDistributionId])
+  @@index([providerOrganizationId])
+  @@map("resource_delivery")
+}
+
+// ======================================================
+// M6: RESOURCE DELIVERY ITEM
+// One line of a delivery, tied to the exact parent
+// delivery and distribution item.
+// ======================================================
+
+model ResourceDeliveryItem {
+  id String @id @default(cuid())
+
+  resourceDeliveryId String
+  resourceDelivery   ResourceDelivery @relation(fields: [resourceDeliveryId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  resourceDistributionItemId String
+  resourceDistributionItem   ResourceDistributionItem @relation(fields: [resourceDistributionItemId, providerOrganizationId], references: [id, providerOrganizationId], onDelete: Restrict)
+
+  resourceDistributionId String
+  providerOrganizationId String
+  quantity               Decimal @db.Decimal(14, 3)
+
+  createdAt DateTime @default(now())
+
+  @@unique([id, providerOrganizationId])
+  @@index([resourceDeliveryId])
+  @@index([resourceDistributionItemId])
+  @@map("resource_delivery_item")
 }

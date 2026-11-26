@@ -104,6 +104,18 @@ export async function getEmergencyRequestById(
                   name: true,
                 },
               },
+
+              items: {
+                orderBy: { createdAt: "asc" },
+                select: {
+                  id: true,
+                  quantity: true,
+                  dispatchedQuantity: true,
+                  deliveredQuantity: true,
+                  status: true,
+                  inventoryItemId: true,
+                },
+              },
             },
           },
         },
