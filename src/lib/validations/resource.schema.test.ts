@@ -123,3 +123,91 @@ describe("updateResourceSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("resource location validation", () => {
+  it("accepts valid latitude and longitude together", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: 45.5,
+      longitude: -122.7,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts both coordinates absent", () => {
+    const result = createResourceSchema.safeParse(validCreate);
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects latitude below -90", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: -91,
+      longitude: 0,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects latitude above 90", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: 91,
+      longitude: 0,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects longitude below -180", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: 0,
+      longitude: -181,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects longitude above 180", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: 0,
+      longitude: 181,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects latitude provided without longitude", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      latitude: 45.5,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects longitude provided without latitude", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      longitude: -122.7,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts empty optional location fields", () => {
+    const result = createResourceSchema.safeParse({
+      ...validCreate,
+      locationName: "",
+      address: "",
+      latitude: "",
+      longitude: "",
+    });
+
+    expect(result.success).toBe(true);
+  });
+});

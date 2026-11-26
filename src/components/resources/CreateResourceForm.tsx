@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 
@@ -35,6 +35,7 @@ export function CreateResourceForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<
     CreateResourceInput,
@@ -48,6 +49,10 @@ export function CreateResourceForm() {
       unit: "",
       description: "",
       sku: "",
+      locationName: undefined,
+      address: undefined,
+      latitude: undefined,
+      longitude: undefined,
     } as CreateResourceInput,
   });
 
@@ -159,6 +164,100 @@ export function CreateResourceForm() {
           />
           {errors.description && (
             <p className={errorClass}>{errors.description.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="locationName" className={labelClass}>
+              Location Name
+            </label>
+            <input
+              id="locationName"
+              type="text"
+              placeholder="e.g. Central Warehouse"
+              {...register("locationName")}
+              className={inputClass}
+            />
+            {errors.locationName && (
+              <p className={errorClass}>
+                {errors.locationName.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="latitude" className={labelClass}>
+              Latitude
+            </label>
+            <Controller
+              name="latitude"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={String(field.value ?? "")}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value),
+                    )
+                  }
+                  className={inputClass}
+                />
+              )}
+            />
+            {errors.latitude && (
+              <p className={errorClass}>{errors.latitude.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="address" className={labelClass}>
+            Address
+          </label>
+          <input
+            id="address"
+            type="text"
+            placeholder="e.g. 123 Main Street"
+            {...register("address")}
+            className={inputClass}
+          />
+          {errors.address && (
+            <p className={errorClass}>{errors.address.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="longitude" className={labelClass}>
+            Longitude
+          </label>
+          <Controller
+            name="longitude"
+            control={control}
+            render={({ field }) => (
+              <input
+                id="longitude"
+                type="number"
+                step="any"
+                value={String(field.value ?? "")}
+                onChange={(e) =>
+                  field.onChange(
+                    e.target.value === ""
+                      ? undefined
+                      : Number(e.target.value),
+                  )
+                }
+                className={inputClass}
+              />
+            )}
+          />
+          {errors.longitude && (
+            <p className={errorClass}>{errors.longitude.message}</p>
           )}
         </div>
       </section>

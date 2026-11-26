@@ -251,6 +251,12 @@ enum ResourceDeliveryStatus {
   CANCELLED
 }
 
+enum ShelterStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
 // ======================================================
 // BETTER AUTH
 // Keep Better Auth field names and model mappings intact.
@@ -419,6 +425,7 @@ model Organization {
   distributions  ResourceDistribution[] @relation("DistributionProvider")
   deliveries     ResourceDelivery[]     @relation("DeliveryProvider")
   stockMovements StockMovement[]        @relation("StockMovementOrganization")
+  shelters       Shelter[]              @relation("ShelterOrganization")
 
   @@unique([slug])
   @@index([status])
@@ -1150,6 +1157,10 @@ model Resource {
   unit        String
   description String?
   sku         String?
+  locationName String?
+  address     String?
+  latitude    Float?
+  longitude   Float?
   isActive    Boolean          @default(true)
 
   inventoryItems InventoryItem[]
@@ -1481,4 +1492,30 @@ model ResourceDeliveryItem {
   @@index([resourceDeliveryId])
   @@index([resourceDistributionItemId])
   @@map("resource_delivery_item")
+}
+
+// ======================================================
+// SHELTERS
+// Shelter facilities owned by an organization.
+// ======================================================
+
+model Shelter {
+  id            String      @id @default(cuid())
+  organizationId String
+  organization   Organization @relation("ShelterOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  name          String
+  address       String
+  capacity      Int
+  currentOccupancy Int @default(0)
+  status        ShelterStatus @default(ACTIVE)
+  latitude      Float?
+  longitude     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("shelter")
 }

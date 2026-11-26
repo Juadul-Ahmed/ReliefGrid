@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 
@@ -21,6 +21,10 @@ interface EditResourceFormProps {
     unit: string;
     description: string | null;
     sku: string | null;
+    locationName: string | null;
+    address: string | null;
+    latitude: number | null;
+    longitude: number | null;
     isActive: boolean;
   };
 }
@@ -46,6 +50,7 @@ export function EditResourceForm({ resource }: EditResourceFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<UpdateResourceInput, unknown, UpdateResourceValues>({
     resolver: zodResolver(updateResourceSchema),
@@ -55,6 +60,10 @@ export function EditResourceForm({ resource }: EditResourceFormProps) {
       unit: resource.unit,
       description: resource.description ?? "",
       sku: resource.sku ?? "",
+      locationName: resource.locationName ?? undefined,
+      address: resource.address ?? undefined,
+      latitude: resource.latitude ?? undefined,
+      longitude: resource.longitude ?? undefined,
       isActive: resource.isActive,
     } as UpdateResourceInput,
   });
@@ -153,22 +162,112 @@ export function EditResourceForm({ resource }: EditResourceFormProps) {
         {errors.sku && <p className={errorClass}>{errors.sku.message}</p>}
       </div>
 
-      <div>
-        <label htmlFor="description" className={labelClass}>
-          Description
-        </label>
-        <textarea
-          id="description"
-          rows={3}
-          {...register("description")}
-          className={inputClass}
-        />
-        {errors.description && (
-          <p className={errorClass}>{errors.description.message}</p>
-        )}
-      </div>
+        <div>
+          <label htmlFor="description" className={labelClass}>
+            Description
+          </label>
+          <textarea
+            id="description"
+            rows={3}
+            {...register("description")}
+            className={inputClass}
+          />
+          {errors.description && (
+            <p className={errorClass}>{errors.description.message}</p>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="locationName" className={labelClass}>
+              Location Name
+            </label>
+            <input
+              id="locationName"
+              type="text"
+              {...register("locationName")}
+              className={inputClass}
+            />
+            {errors.locationName && (
+              <p className={errorClass}>{errors.locationName.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="latitude" className={labelClass}>
+              Latitude
+            </label>
+            <Controller
+              name="latitude"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={String(field.value ?? "")}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value),
+                    )
+                  }
+                  className={inputClass}
+                />
+              )}
+            />
+            {errors.latitude && (
+              <p className={errorClass}>{errors.latitude.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="address" className={labelClass}>
+            Address
+          </label>
+          <input
+            id="address"
+            type="text"
+            {...register("address")}
+            className={inputClass}
+          />
+          {errors.address && (
+            <p className={errorClass}>{errors.address.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="longitude" className={labelClass}>
+            Longitude
+          </label>
+          <Controller
+            name="longitude"
+            control={control}
+            render={({ field }) => (
+              <input
+                id="longitude"
+                type="number"
+                step="any"
+                value={String(field.value ?? "")}
+                onChange={(e) =>
+                  field.onChange(
+                    e.target.value === ""
+                      ? undefined
+                      : Number(e.target.value),
+                  )
+                }
+                className={inputClass}
+              />
+            )}
+          />
+          {errors.longitude && (
+            <p className={errorClass}>{errors.longitude.message}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
         <input
           id="isActive"
           type="checkbox"

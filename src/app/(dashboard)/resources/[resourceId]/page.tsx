@@ -132,11 +132,39 @@ export default async function ResourceDetailsPage({
 
           <DetailItem label="SKU" value={resource.sku ?? "Not provided"} />
 
+          <DetailItem label="Location Name" value={resource.locationName ?? "Not provided"} />
+
+          <DetailItem label="Address" value={resource.address ?? "Not provided"} />
+
           <DetailItem
             label="Last Updated"
             value={formatDate(resource.updatedAt)}
           />
         </div>
+
+        {(resource.latitude !== null && resource.longitude !== null) && (
+          <div className="mt-5">
+            <p className="text-sm text-muted">Coordinates</p>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              <DetailItem
+                label="Latitude"
+                value={
+                  resource.latitude !== null
+                    ? resource.latitude.toFixed(6)
+                    : "Not provided"
+                }
+              />
+              <DetailItem
+                label="Longitude"
+                value={
+                  resource.longitude !== null
+                    ? resource.longitude.toFixed(6)
+                    : "Not provided"
+                }
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mt-5">
           <p className="text-sm text-muted">Description</p>
@@ -249,6 +277,10 @@ export default async function ResourceDetailsPage({
             unit: resource.unit,
             description: resource.description,
             sku: resource.sku,
+            locationName: resource.locationName,
+            address: resource.address,
+            latitude: resource.latitude,
+            longitude: resource.longitude,
             isActive: resource.isActive,
           }}
         />

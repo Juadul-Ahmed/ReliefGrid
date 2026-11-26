@@ -77,4 +77,28 @@ describe("resource queries tenant isolation", () => {
       }),
     );
   });
+
+  it("getResources selects all four location fields", async () => {
+    mocks.resourceFindMany.mockResolvedValue([]);
+
+    await getResources(ORG);
+
+    const select = mocks.resourceFindMany.mock.calls[0][0].select;
+    expect(select.locationName).toBe(true);
+    expect(select.address).toBe(true);
+    expect(select.latitude).toBe(true);
+    expect(select.longitude).toBe(true);
+  });
+
+  it("getResourceById selects all four location fields", async () => {
+    mocks.resourceFindFirst.mockResolvedValue(null);
+
+    await getResourceById("res-1", ORG);
+
+    const select = mocks.resourceFindFirst.mock.calls[0][0].select;
+    expect(select.locationName).toBe(true);
+    expect(select.address).toBe(true);
+    expect(select.latitude).toBe(true);
+    expect(select.longitude).toBe(true);
+  });
 });

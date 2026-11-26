@@ -19,7 +19,9 @@ export type OrganizationPermission =
   | "RESPOND_TO_EMERGENCY_REQUEST"
   | "VIEW_RESOURCES"
   | "MANAGE_RESOURCES"
-  | "ADJUST_INVENTORY";
+  | "ADJUST_INVENTORY"
+  | "VIEW_SHELTERS"
+  | "MANAGE_SHELTERS";
 
 const validOrganizationRoles: OrganizationRole[] = [
   "OWNER",
@@ -50,6 +52,8 @@ const organizationPermissions: Record<
     "VIEW_RESOURCES",
     "MANAGE_RESOURCES",
     "ADJUST_INVENTORY",
+    "VIEW_SHELTERS",
+    "MANAGE_SHELTERS",
   ],
 
   ADMIN: [
@@ -69,6 +73,8 @@ const organizationPermissions: Record<
     "VIEW_RESOURCES",
     "MANAGE_RESOURCES",
     "ADJUST_INVENTORY",
+    "VIEW_SHELTERS",
+    "MANAGE_SHELTERS",
   ],
 
   MEMBER: [
@@ -77,6 +83,7 @@ const organizationPermissions: Record<
     "VIEW_EMERGENCY_REQUESTS",
     "CREATE_EMERGENCY_REQUEST",
     "VIEW_RESOURCES",
+    "VIEW_SHELTERS",
   ],
 };
 

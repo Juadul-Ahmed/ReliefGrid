@@ -118,4 +118,17 @@ describe("selectFefoBatches", () => {
     expect(result[0].batch.id).toBe("b1");
     expect(result[1].batch.id).toBe("b2");
   });
+
+  it("returns partial fulfillment when requested quantity exceeds total available", () => {
+    const batches = [
+      makeBatch({ id: "b1", expiresAt: new Date("2099-07-01"), onHand: 20, reserved: 0 }),
+      makeBatch({ id: "b2", expiresAt: new Date("2099-08-01"), onHand: 20, reserved: 0 }),
+    ];
+
+    const result = selectFefoBatches(batches, new Prisma.Decimal(50));
+
+    expect(result).toHaveLength(2);
+    expect(result[0].quantity).toEqual(new Prisma.Decimal(20));
+    expect(result[1].quantity).toEqual(new Prisma.Decimal(20));
+  });
 });

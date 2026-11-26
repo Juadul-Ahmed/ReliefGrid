@@ -85,6 +85,10 @@ export async function createResource(
             unit: data.unit,
             description: data.description ?? null,
             sku: data.sku ?? null,
+            locationName: data.locationName ?? null,
+            address: data.address ?? null,
+            latitude: data.latitude ?? null,
+            longitude: data.longitude ?? null,
           },
           select: {
             id: true,
@@ -106,6 +110,10 @@ export async function createResource(
               category: data.category,
               unit: data.unit,
               sku: data.sku ?? null,
+              locationName: data.locationName ?? null,
+              address: data.address ?? null,
+              latitude: data.latitude ?? null,
+              longitude: data.longitude ?? null,
               isActive: true,
             },
           },
@@ -188,6 +196,10 @@ export async function updateResource(
         unit: true,
         description: true,
         sku: true,
+        locationName: true,
+        address: true,
+        latitude: true,
+        longitude: true,
         isActive: true,
         updatedAt: true,
       },
@@ -202,6 +214,10 @@ export async function updateResource(
 
     const nextDescription = data.description ?? null;
     const nextSku = data.sku ?? null;
+    const nextLocationName = data.locationName ?? null;
+    const nextAddress = data.address ?? null;
+    const nextLatitude = data.latitude ?? null;
+    const nextLongitude = data.longitude ?? null;
 
     // Avoid unnecessary writes and audit entries for no-op updates.
     const unchanged =
@@ -210,6 +226,10 @@ export async function updateResource(
       existing.unit === data.unit &&
       existing.description === nextDescription &&
       existing.sku === nextSku &&
+      existing.locationName === nextLocationName &&
+      existing.address === nextAddress &&
+      existing.latitude === nextLatitude &&
+      existing.longitude === nextLongitude &&
       existing.isActive === data.isActive;
 
     if (unchanged) {
@@ -234,6 +254,10 @@ export async function updateResource(
             unit: data.unit,
             description: nextDescription,
             sku: nextSku,
+            locationName: nextLocationName,
+            address: nextAddress,
+            latitude: nextLatitude,
+            longitude: nextLongitude,
             isActive: data.isActive,
           },
         });
@@ -257,6 +281,10 @@ export async function updateResource(
               unit: existing.unit,
               description: existing.description,
               sku: existing.sku,
+              locationName: existing.locationName,
+              address: existing.address,
+              latitude: existing.latitude,
+              longitude: existing.longitude,
               isActive: existing.isActive,
             },
             after: {
@@ -265,6 +293,10 @@ export async function updateResource(
               unit: data.unit,
               description: nextDescription,
               sku: nextSku,
+              locationName: nextLocationName,
+              address: nextAddress,
+              latitude: nextLatitude,
+              longitude: nextLongitude,
               isActive: data.isActive,
             },
           },

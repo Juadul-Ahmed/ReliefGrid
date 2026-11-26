@@ -112,3 +112,5 @@ body {
     background-color 200ms ease,
     color 200ms ease;
 }
+
+@import "leaflet/dist/leaflet.css";
