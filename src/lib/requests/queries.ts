@@ -135,8 +135,65 @@ export async function getEmergencyRequests(
   });
 }
 
+export interface EmergencyRequestStats {
+  total: number;
+  submitted: number;
+  underReview: number;
+  verified: number;
+  rejected: number;
+  fulfilled: number;
+}
+
 /**
- * Open incidents the organization can link a new request to.
+ * Returns organization-scoped emergency request statistics.
+ *
+ * Counts are computed server-side using efficient Prisma aggregations.
+ * All counts are scoped by getEmergencyRequestScope to preserve
+ * tenant isolation and visibility rules.
+ */
+export async function getEmergencyRequestStats(
+  organizationId: string,
+) {
+  const scope = getEmergencyRequestScope(organizationId);
+
+  const [
+    total,
+    submitted,
+    underReview,
+    verified,
+    rejected,
+    fulfilled,
+  ] = await Promise.all([
+    prisma.emergencyRequest.count({ where: scope }),
+    prisma.emergencyRequest.count({
+      where: { AND: [scope, { status: "SUBMITTED" }] },
+    }),
+    prisma.emergencyRequest.count({
+      where: { AND: [scope, { status: "UNDER_REVIEW" }] },
+    }),
+    prisma.emergencyRequest.count({
+      where: { AND: [scope, { status: "VERIFIED" }] },
+    }),
+    prisma.emergencyRequest.count({
+      where: { AND: [scope, { status: "REJECTED" }] },
+    }),
+    prisma.emergencyRequest.count({
+      where: { AND: [scope, { status: "FULFILLED" }] },
+    }),
+  ]);
+
+  return {
+    total,
+    submitted,
+    underReview,
+    verified,
+    rejected,
+    fulfilled,
+  };
+}
+
+/**
+ * Returns open incidents the organization can link a new request to.
  * Uses the same incident access scope as request creation.
  */
 export async function getLinkableIncidents(organizationId: string) {

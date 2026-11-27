@@ -72,6 +72,49 @@ export async function getResources(
 }
 
 /**
+ * Returns organization-scoped resource statistics.
+ *
+ * Counts are computed server-side using efficient Prisma aggregations.
+ * All counts are scoped by organizationId to preserve tenant isolation.
+ */
+export async function getResourceStats(organizationId: string) {
+  const [total, active] = await Promise.all([
+    prisma.resource.count({ where: { organizationId } }),
+    prisma.resource.count({ where: { organizationId, isActive: true } }),
+  ]);
+
+  return {
+    total,
+    active,
+  };
+}
+
+export interface ResourceCategoryBreakdownItem {
+  category: string;
+  count: number;
+}
+
+/**
+ * Returns resource counts grouped by category for the organization.
+ */
+export async function getResourceCategoryBreakdown(
+  organizationId: string,
+): Promise<ResourceCategoryBreakdownItem[]> {
+  const rows = await prisma.resource.groupBy({
+    by: ["category"],
+    where: { organizationId },
+    _count: {
+      category: true,
+    },
+  });
+
+  return rows.map((row) => ({
+    category: row.category,
+    count: row._count.category,
+  }));
+}
+
+/**
  * Returns one resource the organization is allowed to see.
  *
  * The lookup is always scoped by organizationId so a resource belonging to

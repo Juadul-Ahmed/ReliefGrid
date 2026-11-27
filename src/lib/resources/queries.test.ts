@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   resourceFindMany: vi.fn(),
   resourceFindFirst: vi.fn(),
+  resourceCount: vi.fn(),
   inventoryFindFirst: vi.fn(),
 }));
 
@@ -11,6 +12,7 @@ vi.mock("@/lib/db/prisma", () => ({
     resource: {
       findMany: mocks.resourceFindMany,
       findFirst: mocks.resourceFindFirst,
+      count: mocks.resourceCount,
     },
     inventoryItem: { findFirst: mocks.inventoryFindFirst },
   },
@@ -21,6 +23,7 @@ import {
   getResources,
   getResourceById,
   getInventoryByResource,
+  getResourceStats,
 } from "./queries";
 
 const ORG = "org-1";
@@ -100,5 +103,33 @@ describe("resource queries tenant isolation", () => {
     expect(select.address).toBe(true);
     expect(select.latitude).toBe(true);
     expect(select.longitude).toBe(true);
+  });
+
+  describe("getResourceStats", () => {
+    it("returns total and active resource counts scoped by organization", async () => {
+      mocks.resourceCount
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(7);
+
+      const stats = await getResourceStats(ORG);
+
+      expect(mocks.resourceCount).toHaveBeenCalledWith({
+        where: { organizationId: ORG },
+      });
+      expect(mocks.resourceCount).toHaveBeenCalledWith({
+        where: { organizationId: ORG, isActive: true },
+      });
+      expect(stats.total).toBe(10);
+      expect(stats.active).toBe(7);
+    });
+
+    it("returns zero counts when no resources exist", async () => {
+      mocks.resourceCount.mockResolvedValue(0);
+
+      const stats = await getResourceStats(ORG);
+
+      expect(stats.total).toBe(0);
+      expect(stats.active).toBe(0);
+    });
   });
 });

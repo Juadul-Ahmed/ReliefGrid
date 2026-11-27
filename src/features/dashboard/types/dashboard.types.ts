@@ -8,10 +8,14 @@ export type IncidentSeverity =
   | "Low";
 
 export type IncidentStatus =
-  | "Responding"
-  | "Investigating"
-  | "Reported"
-  | "Resolved";
+  | "Open"
+  | "Assessing"
+  | "Active"
+  | "Contained"
+  | "Resolved"
+  | "Closed"
+  | "Suspended"
+  | "Cancelled";
 
 export interface DashboardStat {
   title: string;

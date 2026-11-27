@@ -113,6 +113,102 @@ export async function getIncidents(
   });
 }
 
+export interface RecentIncident {
+  id: string;
+  incidentNumber: string;
+  title: string;
+  locationName: string | null;
+  severity: string;
+  status: string;
+  createdAt: Date;
+}
+
+/**
+ * Returns the latest 5 incidents visible to the organization, newest first.
+ *
+ * Reuses getOrganizationIncidentScope to preserve lead-organization and
+ * active-participant visibility rules. Only fields required by the dashboard
+ * widget are selected.
+ */
+export async function getRecentIncidents(
+  organizationId: string,
+): Promise<RecentIncident[]> {
+  const scope = getOrganizationIncidentScope(organizationId);
+
+  return prisma.incident.findMany({
+    where: scope,
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      incidentNumber: true,
+      title: true,
+      locationName: true,
+      severity: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+}
+
+export interface IncidentSeverityBreakdownItem {
+  severity: string;
+  count: number;
+}
+
+export interface IncidentStatusBreakdownItem {
+  status: string;
+  count: number;
+}
+
+/**
+ * Returns incident counts grouped by severity for the organization.
+ *
+ * Uses getOrganizationIncidentScope to preserve tenant isolation.
+ */
+export async function getIncidentSeverityBreakdown(
+  organizationId: string,
+): Promise<IncidentSeverityBreakdownItem[]> {
+  const scope = getOrganizationIncidentScope(organizationId);
+
+  const rows = await prisma.incident.groupBy({
+    by: ["severity"],
+    where: scope,
+    _count: {
+      severity: true,
+    },
+  });
+
+  return rows.map((row) => ({
+    severity: row.severity,
+    count: row._count.severity,
+  }));
+}
+
+/**
+ * Returns incident counts grouped by status for the organization.
+ *
+ * Uses getOrganizationIncidentScope to preserve tenant isolation.
+ */
+export async function getIncidentStatusBreakdown(
+  organizationId: string,
+): Promise<IncidentStatusBreakdownItem[]> {
+  const scope = getOrganizationIncidentScope(organizationId);
+
+  const rows = await prisma.incident.groupBy({
+    by: ["status"],
+    where: scope,
+    _count: {
+      status: true,
+    },
+  });
+
+  return rows.map((row) => ({
+    status: row.status,
+    count: row._count.status,
+  }));
+}
+
 export async function getIncidentStats(organizationId: string) {
   const scope = getOrganizationIncidentScope(organizationId);
 

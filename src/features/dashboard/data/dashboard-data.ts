@@ -60,7 +60,7 @@ export const recentIncidents: Incident[] = [
     title: "Urban Flooding",
     location: "Central District",
     severity: "Critical",
-    status: "Responding",
+    status: "Active",
     time: "10 minutes ago",
   },
   {
@@ -68,7 +68,7 @@ export const recentIncidents: Incident[] = [
     title: "Building Fire",
     location: "Northern District",
     severity: "High",
-    status: "Investigating",
+    status: "Assessing",
     time: "25 minutes ago",
   },
   {
@@ -76,7 +76,7 @@ export const recentIncidents: Incident[] = [
     title: "Road Blockage",
     location: "Eastern District",
     severity: "Medium",
-    status: "Reported",
+    status: "Open",
     time: "42 minutes ago",
   },
   {
