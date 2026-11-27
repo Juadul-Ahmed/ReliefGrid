@@ -20,7 +20,7 @@ export function LandingFooter() {
         <div className="grid gap-8 md:grid-cols-4">
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                 <svg
                   className="size-5"
                   fill="none"

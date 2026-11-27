@@ -172,7 +172,7 @@ export function IncidentStatusSeverityManager({
                 type="button"
                 onClick={handleUpdateStatus}
                 disabled={isPending || !hasStatusChanges}
-                className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Updating..." : "Update Status"}
               </button>
@@ -225,7 +225,7 @@ export function IncidentStatusSeverityManager({
               type="button"
               onClick={handleUpdateSeverity}
               disabled={isPending || !hasSeverityChanges}
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? "Updating..." : "Update Severity"}
             </button>

@@ -283,7 +283,7 @@ export function EditResourceForm({ resource }: EditResourceFormProps) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "Saving..." : "Save Changes"}
         </button>

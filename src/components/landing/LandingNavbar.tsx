@@ -60,7 +60,7 @@ export function LandingNavbar({
           className="flex items-center gap-2"
           onClick={() => setIsMenuOpen(false)}
         >
-          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-white">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <HiOutlineShieldCheck className="size-6" />
           </div>
 
@@ -137,7 +137,7 @@ export function LandingNavbar({
                 type="button"
                 onClick={handleSignOut}
                 disabled={isSigningOut}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {isSigningOut ? "Signing out..." : "Sign Out"}
               </button>
@@ -145,7 +145,7 @@ export function LandingNavbar({
           ) : (
             <Link
               href="/login"
-              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               Sign In
             </Link>
@@ -243,7 +243,7 @@ export function LandingNavbar({
                       type="button"
                       onClick={handleSignOut}
                       disabled={isSigningOut}
-                      className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                      className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
                     >
                       {isSigningOut ? "Signing out..." : "Sign Out"}
                     </button>
@@ -252,7 +252,7 @@ export function LandingNavbar({
                   <Link
                     href="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
+                    className="w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground"
                   >
                     Sign In
                   </Link>

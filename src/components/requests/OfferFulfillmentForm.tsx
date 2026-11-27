@@ -122,7 +122,7 @@ export function OfferFulfillmentForm({
         type="button"
         onClick={handleSubmit}
         disabled={isPending || quantity === ""}
-        className="mt-4 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-4 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? "Allocating Resources..." : "Allocate Resources"}
       </button>

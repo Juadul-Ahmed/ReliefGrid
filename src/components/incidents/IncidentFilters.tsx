@@ -80,7 +80,7 @@ export function IncidentFilters({
 
       <button
         type="submit"
-        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
       >
         Filter
       </button>

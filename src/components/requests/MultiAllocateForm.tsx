@@ -42,7 +42,7 @@ export function MultiAllocateForm({ requestId, items, inventory }: { requestId: 
       ))}
       <div className="flex gap-2">
         <button type="button" onClick={addLine} className="text-xs text-primary">+ line</button>
-        <button type="button" onClick={submit} disabled={pending} className="rounded bg-primary px-3 py-1.5 text-sm text-white disabled:opacity-50">{pending ? "Allocating..." : "Allocate"}</button>
+        <button type="button" onClick={submit} disabled={pending} className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">{pending ? "Allocating..." : "Allocate"}</button>
       </div>
     </div>
   );

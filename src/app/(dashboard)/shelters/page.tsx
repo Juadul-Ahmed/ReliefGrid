@@ -62,7 +62,7 @@ export default async function SheltersPage({
         {canManage && (
           <Link
             href="/shelters/create"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
             <HiOutlinePlus className="size-5" />
             Create Shelter

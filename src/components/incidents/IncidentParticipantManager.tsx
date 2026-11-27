@@ -339,7 +339,7 @@ export function IncidentParticipantManager({
                 selectedRoles.length === 0 ||
                 selectableOrganizations.length === 0
               }
-              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? "Sending Invitation..." : "Send Invitation"}
             </button>

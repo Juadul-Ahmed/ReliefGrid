@@ -143,7 +143,7 @@ export function LandingHero({
             {primaryCta && (
               <Link
                 href={primaryCta.href}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
               >
                 {primaryCta.label}
                 <PrimaryIcon className="size-5" />

@@ -23,13 +23,13 @@ export function LandingContact() {
           other response organizations.
         </p>
 
-        <Link
-          href="/onboarding"
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Get Started
-          <HiOutlineArrowRight className="size-5" />
-        </Link>
+          <Link
+            href="/onboarding"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Get Started
+            <HiOutlineArrowRight className="size-5" />
+          </Link>
       </div>
     </section>
   );

@@ -149,7 +149,7 @@ export function AllocationStatusActions({
                   type="button"
                   onClick={() => handleDispatch(item)}
                   disabled={isPending}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                 >
                   {isPending ? "Dispatching..." : "Dispatch"}
                 </button>

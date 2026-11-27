@@ -49,7 +49,7 @@ export default async function ResourcesPage({
         {canManage && (
           <Link
             href="/resources/create"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
             <HiOutlinePlus className="size-5" />
             Create Resource

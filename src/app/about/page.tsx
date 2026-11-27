@@ -162,7 +162,7 @@ export default function AboutPage() {
           <div className="mt-12 flex flex-col items-center justify-center gap-6">
             <Link
               href="/report-incident"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               Report an Incident
             </Link>

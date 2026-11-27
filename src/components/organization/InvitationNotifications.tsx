@@ -384,7 +384,7 @@ export function InvitationNotifications() {
                                     "accept",
                                   )
                                 }
-                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <HiOutlineCheck className="size-4" />
                                 {isProcessing ? "Please wait..." : "Accept"}

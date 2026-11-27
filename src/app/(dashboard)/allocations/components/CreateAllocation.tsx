@@ -46,7 +46,7 @@ export function CreateAllocation({ requests, inventory }: CreateAllocationProps)
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
       >
         Create Allocation
       </button>
