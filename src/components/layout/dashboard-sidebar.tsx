@@ -98,21 +98,21 @@ const navigationGroups: NavigationGroup[] = [
       },
     ],
   },
-  {
-    label: "People & Coordination",
-    items: [
-      {
-        label: "Volunteers",
-        href: "/volunteers",
-        icon: HiOutlineUsers,
-      },
-      {
-        label: "Teams",
-        href: "/teams",
-        icon: HiOutlineUsers,
-      },
-    ],
-  },
+  // {
+  //   label: "People & Coordination",
+  //   items: [
+  //     {
+  //       label: "Volunteers",
+  //       href: "/volunteers",
+  //       icon: HiOutlineUsers,
+  //     },
+  //     {
+  //       label: "Teams",
+  //       href: "/teams",
+  //       icon: HiOutlineUsers,
+  //     },
+  //   ],
+  // },
   {
     label: "Intelligence",
     items: [

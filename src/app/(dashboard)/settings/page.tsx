@@ -6,10 +6,11 @@ import {
   HiOutlineChevronRight,
 } from "react-icons/hi2";
 
+import { OrganizationNameEditor } from "@/components/settings/OrganizationNameEditor";
 import { requireOrganization } from "@/lib/permissions/organization";
 
 export default async function SettingsPage() {
-  const { organization } = await requireOrganization();
+  const { organization, membership } = await requireOrganization();
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -30,27 +31,10 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-border bg-surface p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-foreground">
-          Organization Information
-        </h2>
-
-        <div className="mt-4 space-y-3">
-          <div>
-            <p className="text-xs text-muted">Organization name</p>
-            <p className="mt-1 text-sm font-medium text-foreground">
-              {organization.name}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs text-muted">Organization ID</p>
-            <p className="mt-1 break-all font-mono text-xs text-muted">
-              {organization.id}
-            </p>
-          </div>
-        </div>
-      </section>
+      <OrganizationNameEditor
+        organization={{ id: organization.id, name: organization.name }}
+        membership={{ role: membership.role }}
+      />
 
       <section className="rounded-xl border border-border bg-surface">
         <div className="border-b border-border px-5 py-4">
