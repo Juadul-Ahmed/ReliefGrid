@@ -271,6 +271,7 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   systemRole    String   @default("USER")
+  status        String   @default("ACTIVE")
 
   sessions    Session[]
   accounts    Account[]
@@ -570,6 +571,19 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([requestId])
   @@map("audit_log")
+}
+
+// ======================================================
+// PLATFORM SETTINGS
+// ======================================================
+
+model PlatformSettings {
+  id        String   @id @default("platform")
+  settings  Json     @default("{}")
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("platform_settings")
 }
 
 // ======================================================
