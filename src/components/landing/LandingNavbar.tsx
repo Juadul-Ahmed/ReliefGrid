@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { signOut } from "@/lib/auth-client";
 
 import { InvitationNotifications } from "@/components/organization/InvitationNotifications";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 import {
   HiOutlineBars3,
@@ -49,9 +50,6 @@ export function LandingNavbar({
       setIsSigningOut(false);
     }
   }
-
-  const dashboardHref = isSystemAdmin ? "/admin" : "/dashboard";
-  const dashboardLabel = isSystemAdmin ? "Admin Panel" : "Dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur">
@@ -101,6 +99,13 @@ export function LandingNavbar({
             Onboard
           </Link>
 
+          <Link
+            href="/report-incident"
+            className="text-sm font-medium text-muted transition-colors hover:text-primary"
+          >
+            Report Incident
+          </Link>
+
           {hasOrganization && !isSystemAdmin && (
             <Link
               href="/dashboard"
@@ -122,6 +127,8 @@ export function LandingNavbar({
 
         {/* Desktop actions */}
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
+
           {isAuthenticated ? (
             <>
               <InvitationNotifications />
@@ -197,6 +204,14 @@ export function LandingNavbar({
               Onboard
             </Link>
 
+            <Link
+              href="/report-incident"
+              onClick={() => setIsMenuOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-surface-secondary"
+            >
+              Report Incident
+            </Link>
+
             {hasOrganization && !isSystemAdmin && (
               <Link
                 href="/dashboard"
@@ -217,30 +232,32 @@ export function LandingNavbar({
               </Link>
             )}
 
-            <div className="mt-3 flex items-center justify-between border-t border-border pt-4">
-              {isAuthenticated ? (
-                <>
-                  <InvitationNotifications />
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-4">
+                <ThemeToggle />
 
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    disabled={isSigningOut}
-                    className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                {isAuthenticated ? (
+                  <>
+                    <InvitationNotifications />
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={isSigningOut}
+                      className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      {isSigningOut ? "Signing out..." : "Sign Out"}
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
                   >
-                    {isSigningOut ? "Signing out..." : "Sign Out"}
-                  </button>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
+                    Sign In
+                  </Link>
+                )}
+              </div>
           </div>
         </div>
       )}
